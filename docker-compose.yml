@@ -1,0 +1,173 @@
+services:
+  # ============ Neo4j 图数据库 ============
+  neo4j:
+    image: docker.m.daocloud.io/library/neo4j:5-community
+    container_name: chemagent-neo4j
+    ports:
+      - "7474:7474"   # Web 管理界面
+      - "7687:7687"   # Bolt 协议
+    environment:
+      - NEO4J_AUTH=neo4j/chemagent2024
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
+  # ============ PostgreSQL (可选，auth_db_backend=postgresql 时启用) ============
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:16-alpine
+    container_name: chemagent-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=chemagent
+      - POSTGRES_USER=chemagent
+      - POSTGRES_PASSWORD=chemagent2024
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chemagent -d chemagent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    profiles:
+      - postgres
+      - full
+
+  # ============ MySQL (可选，auth_db_backend=mysql 时启用) ============
+  mysql:
+    image: docker.m.daocloud.io/library/mysql:8.4
+    container_name: chemagent-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=chemagent
+      - MYSQL_USER=chemagent
+      - MYSQL_PASSWORD=chemagent2024
+      - MYSQL_ROOT_PASSWORD=chemagent2024root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u chemagent -pchemagent2024"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+    profiles:
+      - mysql
+      - full
+
+  # ============ FastAPI 后端 ============
+  api:
+    build: .
+    container_name: chemagent-api
+    command: python -m uvicorn chem_agent.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - CHEM_NEO4J_URI=bolt://neo4j:7687
+      - CHEM_NEO4J_USER=neo4j
+      - CHEM_NEO4J_PASSWORD=chemagent2024
+      # 数据库后端选择
+      - CHEM_AUTH_DB_BACKEND=${CHEM_AUTH_DB_BACKEND:-sqlite}
+      - CHEM_AUTH_DB_PATH=/app/data/chemagent_auth.db
+      # 本地免登录模式（true 时跳过 JWT；仅限本地/内网）
+      - CHEM_AUTH_BYPASS=${CHEM_AUTH_BYPASS:-false}
+      # PostgreSQL (当 AUTH_DB_BACKEND=postgresql 时)
+      - CHEM_POSTGRES_HOST=${CHEM_POSTGRES_HOST:-postgres}
+      - CHEM_POSTGRES_PORT=${CHEM_POSTGRES_PORT:-5432}
+      - CHEM_POSTGRES_DB=${CHEM_POSTGRES_DB:-chemagent}
+      - CHEM_POSTGRES_USER=${CHEM_POSTGRES_USER:-chemagent}
+      - CHEM_POSTGRES_PASSWORD=${CHEM_POSTGRES_PASSWORD:-chemagent2024}
+      # MySQL (当 AUTH_DB_BACKEND=mysql 时)
+      - CHEM_MYSQL_HOST=${CHEM_MYSQL_HOST:-mysql}
+      - CHEM_MYSQL_PORT=${CHEM_MYSQL_PORT:-3306}
+      - CHEM_MYSQL_DB=${CHEM_MYSQL_DB:-chemagent}
+      - CHEM_MYSQL_USER=${CHEM_MYSQL_USER:-chemagent}
+      - CHEM_MYSQL_PASSWORD=${CHEM_MYSQL_PASSWORD:-chemagent2024}
+      # LLM 配置
+      - CHEM_LLM_PROVIDER=${CHEM_LLM_PROVIDER:-}
+      - CHEM_LLM_BASE_URL=${CHEM_LLM_BASE_URL:-}
+      - CHEM_LLM_MODEL=${CHEM_LLM_MODEL:-}
+      - CHEM_LLM_API_KEY=${CHEM_LLM_API_KEY:-}
+      # Embedding 配置
+      - CHEM_EMBEDDING_PROVIDER=${CHEM_EMBEDDING_PROVIDER:-}
+      - CHEM_EMBEDDING_BASE_URL=${CHEM_EMBEDDING_BASE_URL:-}
+      - CHEM_EMBEDDING_MODEL=${CHEM_EMBEDDING_MODEL:-}
+      - CHEM_EMBEDDING_API_KEY=${CHEM_EMBEDDING_API_KEY:-}
+      # Azure OpenAI 专用
+      - CHEM_AZURE_DEPLOYMENT_NAME=${CHEM_AZURE_DEPLOYMENT_NAME:-}
+      - CHEM_AZURE_API_VERSION=${CHEM_AZURE_API_VERSION:-2024-02-01}
+      - CHEM_JWT_SECRET_KEY=chemagent-prod-secret-please-change-me
+      - CHEM_CHROMA_PERSIST_DIR=/app/data/chromadb
+    volumes:
+      - auth_data:/app/data
+      - chroma_data:/app/data/chromadb
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ============ Streamlit 前端 ============
+  ui:
+    build: .
+    container_name: chemagent-ui
+    command: python -m streamlit run chem_agent/ui/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============ 数据初始化（一次性任务）============
+  init-data:
+    build: .
+    container_name: chemagent-init
+    command: python data/init_data.py
+    environment:
+      - CHEM_NEO4J_URI=bolt://neo4j:7687
+      - CHEM_NEO4J_USER=neo4j
+      - CHEM_NEO4J_PASSWORD=chemagent2024
+      - CHEM_AUTH_DB_BACKEND=${CHEM_AUTH_DB_BACKEND:-sqlite}
+      - CHEM_AUTH_DB_PATH=/app/data/chemagent_auth.db
+      - CHEM_POSTGRES_HOST=${CHEM_POSTGRES_HOST:-postgres}
+      - CHEM_POSTGRES_PORT=${CHEM_POSTGRES_PORT:-5432}
+      - CHEM_POSTGRES_DB=${CHEM_POSTGRES_DB:-chemagent}
+      - CHEM_POSTGRES_USER=${CHEM_POSTGRES_USER:-chemagent}
+      - CHEM_POSTGRES_PASSWORD=${CHEM_POSTGRES_PASSWORD:-chemagent2024}
+      - CHEM_MYSQL_HOST=${CHEM_MYSQL_HOST:-mysql}
+      - CHEM_MYSQL_PORT=${CHEM_MYSQL_PORT:-3306}
+      - CHEM_MYSQL_DB=${CHEM_MYSQL_DB:-chemagent}
+      - CHEM_MYSQL_USER=${CHEM_MYSQL_USER:-chemagent}
+      - CHEM_MYSQL_PASSWORD=${CHEM_MYSQL_PASSWORD:-chemagent2024}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    profiles:
+      - init
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  auth_data:
+  chroma_data:
+  postgres_data:
+  mysql_data:

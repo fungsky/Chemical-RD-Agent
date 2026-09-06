@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "title": "中国国家标准与行业标准登记表（参考索引）",
+    "version": "1.0",
+    "updated": "2026-08-31",
+    "disclaimer": "本表为研发阶段合规初筛的参考索引，非官方法规文本；标准号、限值与状态请以最新正式发布的标准文本及监管要求为准。"
+  },
+  "categories": {
+    "national_standard": "国家标准（GB / GB-T）",
+    "industry_standard": "行业标准（行标，如 QB/T 轻工）",
+    "regulatory_document": "规范性文件（强制）"
+  },
+  "standards": [
+    {
+      "standard_no": "GB 6675.4-2014",
+      "name": "玩具安全 第4部分：特定元素的迁移",
+      "category": "national_standard",
+      "scope": "玩具及儿童用品",
+      "key_limits": ["锑≤60mg/kg", "砷≤25mg/kg", "钡≤1000mg/kg", "镉≤75mg/kg", "铬≤60mg/kg", "铅≤90mg/kg", "汞≤60mg/kg", "硒≤500mg/kg(迁移量)"],
+      "status": "现行",
+      "note": "对应国际标准 ISO 8124-3，国内玩具合规核心标准"
+    },
+    {
+      "standard_no": "GB 18401-2010",
+      "name": "国家纺织产品基本安全技术规范",
+      "category": "national_standard",
+      "scope": "纺织品（服装、家纺等）",
+      "key_limits": ["甲醛：A类(婴幼儿)≤20mg/kg，B类(直接接触)≤75mg/kg，C类≤300mg/kg", "可分解致癌芳香胺≤20mg/kg", "pH 4.0-9.0"],
+      "status": "现行",
+      "note": "纺织品安全强制标准，配套 GB 31701-2015 婴幼儿产品"
+    },
+    {
+      "standard_no": "GB 31701-2015",
+      "name": "婴幼儿及儿童纺织产品安全技术规范",
+      "category": "national_standard",
+      "scope": "婴幼儿及儿童纺织品",
+      "key_limits": ["甲醛≤20mg/kg(A类)", "可分解致癌芳香胺≤20mg/kg", "邻苯二甲酸酯限量", "阻燃要求"],
+      "status": "现行",
+      "note": "GB 18401 在儿童产品上的强化"
+    },
+    {
+      "standard_no": "GB 18580-2017",
+      "name": "室内装饰装修材料 人造板及其制品中甲醛释放限量",
+      "category": "national_standard",
+      "scope": "人造板及饰面制品",
+      "key_limits": ["甲醛释放量≤0.124mg/m³(1m³气候箱法)"],
+      "status": "现行",
+      "note": "原 GB 18580-2001 干燥器法废止，统一为气候箱法"
+    },
+    {
+      "standard_no": "GB 18582-2020",
+      "name": "建筑用墙面涂料中有害物质限量",
+      "category": "national_standard",
+      "scope": "内墙/外墙建筑涂料",
+      "key_limits": ["甲醛≤50mg/kg", "苯系物总和≤100mg/kg", "乙二醇醚及醚酯总和≤100mg/kg", "可溶性重金属：铅90/镉75/铬60/汞60 mg/kg", "VOC：内墙≤80g/L(水性)"],
+      "status": "现行",
+      "note": "替代 GB 18582-2008"
+    },
+    {
+      "standard_no": "GB 18583-2008",
+      "name": "室内装饰装修材料 胶粘剂中有害物质限量",
+      "category": "national_standard",
+      "scope": "室内装修用胶粘剂",
+      "key_limits": ["游离甲醛≤0.5g/kg(水基型)", "苯≤0.2g/kg", "甲苯+二甲苯≤10g/kg(水基型)"],
+      "status": "现行",
+      "note": "与 GB 33372-2020 VOC 限量配合使用"
+    },
+    {
+      "standard_no": "GB 18584-2001",
+      "name": "室内装饰装修材料 木家具中有害物质限量",
+      "category": "national_standard",
+      "scope": "木家具",
+      "key_limits": ["甲醛释放量≤1.5mg/L(干燥器法)"],
+      "status": "现行",
+      "note": "部分条款已被 GB/T 35607 等产品标准补充"
+    },
+    {
+      "standard_no": "GB 18585-2001",
+      "name": "室内装饰装修材料 壁纸中有害物质限量",
+      "category": "national_standard",
+      "scope": "壁纸",
+      "key_limits": ["甲醛≤120mg/kg", "重金属限量(钡/镉/铬/铅/砷/汞/硒/锑)"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 18586-2001",
+      "name": "室内装饰装修材料 聚氯乙烯卷材地板中有害物质限量",
+      "category": "national_standard",
+      "scope": "PVC 卷材地板",
+      "key_limits": ["氯乙烯单体≤5mg/kg", "可溶性重金属限量", "挥发物限量"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 18587-2001",
+      "name": "室内装饰装修材料 地毯、地毯衬垫及地毯胶粘剂中有害物质释放限量",
+      "category": "national_standard",
+      "scope": "地毯及配套材料",
+      "key_limits": ["总挥发性有机物释放限量(A/B级)", "甲醛释放限量", "苯乙烯/4-苯基环己烯等"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 24410-2009",
+      "name": "室内装饰装修材料 水性木器涂料中有害物质限量",
+      "category": "national_standard",
+      "scope": "水性木器涂料",
+      "key_limits": ["VOC≤300g/L", "游离甲醛≤100mg/kg", "苯系物总和≤300mg/kg", "乙二醇醚及醚酯总和≤300mg/kg", "可溶性重金属：铅90/镉75/铬60/汞60 mg/kg"],
+      "status": "现行",
+      "note": "配套 GB/T 23985/23986 VOC 测定方法"
+    },
+    {
+      "standard_no": "GB 24409-2020",
+      "name": "车辆涂料中有害物质限量",
+      "category": "national_standard",
+      "scope": "汽车/轨道交通等车辆涂料",
+      "key_limits": ["VOC 限量(按涂料类型)", "甲醛/苯系物/乙二醇醚限量", "可溶性重金属限量"],
+      "status": "现行",
+      "note": "替代 GB 24409-2009"
+    },
+    {
+      "standard_no": "GB 30981-2020",
+      "name": "工业防护涂料中有害物质限量",
+      "category": "national_standard",
+      "scope": "工业防护涂料(钢结构/机械设备等)",
+      "key_limits": ["VOC 限量(按类型)", "甲醛/苯系物限量", "可溶性重金属限量"],
+      "status": "现行",
+      "note": "重防腐涂料常用配套标准"
+    },
+    {
+      "standard_no": "GB 33372-2020",
+      "name": "胶粘剂挥发性有机化合物限量",
+      "category": "national_standard",
+      "scope": "胶粘剂(水基/溶剂型/本体型)",
+      "key_limits": ["VOC 限量(按类型分档)", "苯系物限量"],
+      "status": "现行",
+      "note": "替代 GB/T 33372-2016 相关要求，胶粘剂环保准入"
+    },
+    {
+      "standard_no": "GB 38468-2019",
+      "name": "室内地坪涂料中有机化合物含量及有害物质限量",
+      "category": "national_standard",
+      "scope": "室内地坪涂料",
+      "key_limits": ["VOC 限量", "甲醛/苯系物/乙二醇醚限量", "可溶性重金属限量"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 38469-2019",
+      "name": "船舶涂料中有害物质限量",
+      "category": "national_standard",
+      "scope": "船舶涂料",
+      "key_limits": ["VOC 限量", "有害物质限量(含防污剂)"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 38507-2020",
+      "name": "油墨中可挥发性有机化合物(VOCs)含量的限值",
+      "category": "national_standard",
+      "scope": "印刷油墨",
+      "key_limits": ["VOC 含量限值(水性/溶剂型/能量固化型分档)"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 30512-2014",
+      "name": "汽车禁用物质要求",
+      "category": "national_standard",
+      "scope": "汽车及零部件材料",
+      "key_limits": ["铅≤0.1%", "镉≤0.01%", "汞≤0.1%", "六价铬≤0.1%(均质材料)"],
+      "status": "现行",
+      "note": "对应欧盟 ELV 2000/53/EC 的中国标准，注意查询最新修订版"
+    },
+    {
+      "standard_no": "GB/T 26572-2011",
+      "name": "电子电气产品中限用物质的限量要求",
+      "category": "national_standard",
+      "scope": "电子电气产品",
+      "key_limits": ["铅≤0.1%", "镉≤0.01%", "汞≤0.1%", "六价铬≤0.1%", "PBB/PBDE≤0.1%(均质材料)"],
+      "status": "现行",
+      "note": "对应欧盟 RoHS 的中国标准，配套 GB/T 26125 检测方法"
+    },
+    {
+      "standard_no": "GB 4806.1-2016",
+      "name": "食品安全国家标准 食品接触材料及制品通用安全要求",
+      "category": "national_standard",
+      "scope": "食品接触材料及制品",
+      "key_limits": ["总迁移量/特定迁移量/残留量依具体产品标准"],
+      "status": "现行",
+      "note": "GB 4806 系列总则，配合各材质标准使用"
+    },
+    {
+      "standard_no": "GB 4806.7-2016",
+      "name": "食品安全国家标准 食品接触用塑料材料及制品",
+      "category": "national_standard",
+      "scope": "食品接触塑料",
+      "key_limits": ["总迁移量≤10mg/dm²(或按接触面积)", "高锰酸钾消耗量等"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 4806.9-2016",
+      "name": "食品安全国家标准 食品接触用金属材料及制品",
+      "category": "national_standard",
+      "scope": "食品接触金属",
+      "key_limits": ["铅迁移≤0.05mg/kg(具体元素迁移限量)", "镉/砷/锑等迁移限量"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB 4806.10-2016",
+      "name": "食品安全国家标准 食品接触用涂料及涂层",
+      "category": "national_standard",
+      "scope": "食品接触涂料涂层",
+      "key_limits": ["总迁移量/特定迁移限量(依涂层类型)"],
+      "status": "现行",
+      "note": "食品罐内壁涂料等适用"
+    },
+    {
+      "standard_no": "GB 9685-2016",
+      "name": "食品安全国家标准 食品接触材料及制品用添加剂使用标准",
+      "category": "national_standard",
+      "scope": "食品接触材料添加剂",
+      "key_limits": ["各添加剂最大使用量/特定迁移量(SML)"],
+      "status": "现行",
+      "note": "添加剂准用清单制度"
+    },
+    {
+      "standard_no": "GB/T 8372-2017",
+      "name": "牙膏",
+      "category": "national_standard",
+      "scope": "牙膏产品",
+      "key_limits": ["总氟：成人0.05%~0.15%，儿童0.05%~0.11%", "感官/理化指标"],
+      "status": "现行",
+      "note": "牙膏按《化妆品监督管理条例》纳入化妆品管理，需备案"
+    },
+    {
+      "standard_no": "GB 8624-2012",
+      "name": "建筑材料及制品燃烧性能分级",
+      "category": "national_standard",
+      "scope": "建筑材料",
+      "key_limits": ["燃烧性能等级 A(A1/A2)、B、C、D、E、F"],
+      "status": "现行",
+      "note": "对应欧盟 EN 13501-1 分级体系"
+    },
+    {
+      "standard_no": "GB 50325-2020",
+      "name": "民用建筑工程室内环境污染控制标准",
+      "category": "national_standard",
+      "scope": "民用建筑室内环境",
+      "key_limits": ["室内空气污染物：甲醛≤0.07mg/m³(Ⅰ类)", "苯/氨/氡/TVOC 限量"],
+      "status": "现行",
+      "note": "工程验收类标准，材料环保的终端判定依据"
+    },
+    {
+      "standard_no": "GB/T 18883-2022",
+      "name": "室内空气质量标准",
+      "category": "national_standard",
+      "scope": "室内空气环境",
+      "key_limits": ["甲醛≤0.08mg/m³(1h均值)", "苯≤0.03mg/m³", "TVOC≤0.6mg/m³"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "GB/T 23986-2009",
+      "name": "色漆和清漆 挥发性有机化合物(VOC)含量的测定 气相色谱法",
+      "category": "national_standard",
+      "scope": "涂料 VOC 检测",
+      "key_limits": ["VOC 含量测定方法"],
+      "status": "现行",
+      "note": "与 ISO 11890-2 一致"
+    },
+    {
+      "standard_no": "GB/T 23985-2009",
+      "name": "色漆和清漆 挥发性有机化合物(VOC)含量的测定 差值法",
+      "category": "national_standard",
+      "scope": "涂料 VOC 检测",
+      "key_limits": ["VOC 含量测定方法"],
+      "status": "现行",
+      "note": "与 ISO 11890-1 一致"
+    },
+    {
+      "standard_no": "QB/T 1974-2018",
+      "name": "洗发液、洗发膏",
+      "category": "industry_standard",
+      "scope": "洗发产品",
+      "key_limits": ["有效物含量≥10%(洗发液)", "pH 4.0-9.0", "卫生指标按化妆品规范"],
+      "status": "现行",
+      "note": "轻工行标，日化洗发产品基础标准"
+    },
+    {
+      "standard_no": "QB/T 1975-2013",
+      "name": "护发素",
+      "category": "industry_standard",
+      "scope": "护发产品",
+      "key_limits": ["pH 3.0-7.0", "有效物指标", "卫生指标按化妆品规范"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "QB/T 1994-2013",
+      "name": "沐浴剂",
+      "category": "industry_standard",
+      "scope": "沐浴产品",
+      "key_limits": ["总活性物含量", "pH 4.0-10.0", "卫生指标按化妆品规范"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "QB/T 2654-2013",
+      "name": "洗手液",
+      "category": "industry_standard",
+      "scope": "洗手产品",
+      "key_limits": ["总活性物含量(普通/抗菌型)", "pH 4.0-10.0", "微生物指标"],
+      "status": "现行",
+      "note": "抗菌型洗手液还需符合消毒产品管理要求"
+    },
+    {
+      "standard_no": "QB/T 1224-2012",
+      "name": "衣料用液体洗涤剂",
+      "category": "industry_standard",
+      "scope": "液体洗衣剂",
+      "key_limits": ["总活性物含量≥15%(普通型)", "pH ≤10.5(25℃ 1%溶液)", "去污力指标"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "QB/T 2485-2008",
+      "name": "香皂",
+      "category": "industry_standard",
+      "scope": "香皂产品",
+      "key_limits": ["干皂含量", "总有效物", "游离苛性碱限量"],
+      "status": "现行",
+      "note": ""
+    },
+    {
+      "standard_no": "《化妆品安全技术规范》(2015年版)",
+      "name": "化妆品安全技术规范（2015年版）",
+      "category": "regulatory_document",
+      "scope": "化妆品全品类",
+      "key_limits": ["重金属：铅≤10mg/kg、砷≤2mg/kg、汞≤1mg/kg、镉≤5mg/kg", "甲醇≤0.2%", "二噁烷≤30mg/kg", "微生物：菌落总数≤1000CFU/g(眼部/儿童≤500)", "禁用/限用/准用成分清单"],
+      "status": "现行",
+      "note": "国家药监局发布，化妆品注册备案与生产强制的技术规范"
+    }
+  ]
+}

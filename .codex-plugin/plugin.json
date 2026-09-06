@@ -1,0 +1,9 @@
+{
+  "name": "chemagent-skill",
+  "version": "0.1.0",
+  "description": "ChemAgent skill - query your chemical R&D assistant from Codex",
+  "author": "ChemAgent Contributors",
+  "skills": [
+    "chemagent"
+  ]
+}

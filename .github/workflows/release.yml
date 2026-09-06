@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          docker build -t chemagent:${{ steps.version.outputs.VERSION }} .
+          docker tag chemagent:${{ steps.version.outputs.VERSION }} chemagent:latest
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ChemAgent v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## ChemAgent v${{ steps.version.outputs.VERSION }}
+
+            ### 部署方式
+
+            ```bash
+            # Docker Compose (推荐)
+            git clone https://github.com/${{ github.repository }}.git
+            cd chem-ai-agent
+            cp .env.example .env
+            # 编辑 .env 配置
+            docker compose up -d
+            ```
+
+            ### 更新内容
+            - 详见 [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          generate_release_notes: true
+          files: |
+            docker-compose.yml
+            .env.example

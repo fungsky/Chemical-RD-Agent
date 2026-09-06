@@ -1,0 +1,40 @@
+# Python
+__pycache__
+*.py[cod]
+.venv
+venv
+.env
+.git
+
+# Data
+models/*.pkl
+data/auth.db
+data/chromadb/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Test
+.pytest_cache/
+tests/
+
+# Git
+.gitignore
+.git/
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE
+
+# Scripts (not needed in container)
+scripts/deploy.sh
+scripts/stop.sh
+*.bat
+
+# Docs
+docs/

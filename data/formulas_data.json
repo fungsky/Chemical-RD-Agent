@@ -1,0 +1,154 @@
+[
+  {
+    "name": "高防腐环氧底漆 HF-001",
+    "code": "HF-001",
+    "version": "2.1",
+    "category": "涂料",
+    "description": "双组分环氧防腐底漆，适用于钢结构重防腐体系，具有优异的附着力和耐盐雾性能（1000h+）。广泛用于桥梁、储罐、船舶等。",
+    "target_application": "钢结构重防腐",
+    "creator": "张工",
+    "tags": [
+      "防腐",
+      "环氧",
+      "底漆",
+      "钢结构",
+      "双组分"
+    ],
+    "items": [
+      {
+        "material": {
+          "name": "环氧树脂E-51",
+          "function": "基础树脂"
+        },
+        "weight_percent": 26.0,
+        "addition_order": 1,
+        "notes": "A组分主树脂"
+      },
+      {
+        "material": {
+          "name": "二甲苯",
+          "function": "溶剂"
+        },
+        "weight_percent": 16.0,
+        "addition_order": 2
+      },
+      {
+        "material": {
+          "name": "丁醇",
+          "function": "溶剂"
+        },
+        "weight_percent": 5.0,
+        "addition_order": 3
+      },
+      {
+        "material": {
+          "name": "BYK-163",
+          "function": "分散剂"
+        },
+        "weight_percent": 1.2,
+        "addition_order": 4
+      },
+      {
+        "material": {
+          "name": "二氧化钛R-706",
+          "function": "颜料"
+        },
+        "weight_percent": 14.0,
+        "addition_order": 5
+      },
+      {
+        "material": {
+          "name": "磷酸锌ZP-10",
+          "function": "颜料"
+        },
+        "weight_percent": 8.0,
+        "addition_order": 6
+      },
+      {
+        "material": {
+          "name": "碳酸钙1250目",
+          "function": "填料"
+        },
+        "weight_percent": 10.0,
+        "addition_order": 7
+      },
+      {
+        "material": {
+          "name": "滑石粉800目",
+          "function": "填料"
+        },
+        "weight_percent": 10.0,
+        "addition_order": 8
+      },
+      {
+        "material": {
+          "name": "BYK-066N",
+          "function": "消泡剂"
+        },
+        "weight_percent": 0.5,
+        "addition_order": 9
+      },
+      {
+        "material": {
+          "name": "BYK-333",
+          "function": "流平剂"
+        },
+        "weight_percent": 0.3,
+        "addition_order": 10
+      },
+      {
+        "material": {
+          "name": "有机膨润土SD-1",
+          "function": "增稠剂"
+        },
+        "weight_percent": 1.0,
+        "addition_order": 11
+      },
+      {
+        "material": {
+          "name": "聚酰胺650",
+          "function": "固化剂"
+        },
+        "weight_percent": 8.0,
+        "addition_order": 12
+      }
+    ],
+    "process": {
+      "mixing_speed": 1200,
+      "mixing_time": 45,
+      "temperature": 25,
+      "curing_temperature": 25,
+      "curing_time": 168
+    },
+    "performance": [
+      {
+        "test_name": "铅笔硬度",
+        "value": 3,
+        "unit": "H",
+        "target_min": 2,
+        "is_qualified": true
+      },
+      {
+        "test_name": "附着力(划格法)",
+        "value": 0,
+        "unit": "级",
+        "target_max": 1,
+        "is_qualified": true
+      },
+      {
+        "test_name": "耐盐雾",
+        "value": 1000,
+        "unit": "h",
+        "target_min": 500,
+        "is_qualified": true
+      },
+      {
+        "test_name": "耐冲击性",
+        "value": 50,
+        "unit": "cm",
+        "target_min": 40,
+        "is_qualified": true
+      }
+    ]
+  }
+]
