@@ -390,7 +390,14 @@ export default function LabCenter() {
                       placeholder="因子名，如固化温度"
                       value={f.name}
                       style={{ width: 220 }}
-                      onChange={(v) => updateFactors(idx, { name: v })}
+                      onChange={(v) => {
+                        const known: Record<string, string> = {
+                          固化温度: '℃', 反应温度: '℃', 温度: '℃',
+                          固化时间: 'h', 搅拌时间: 'min',
+                          搅拌速度: 'rpm', 压力: 'MPa',
+                        };
+                        updateFactors(idx, { name: v, unit: f.unit || known[v] || '' });
+                      }}
                       options={[
                         ...materialOptions.map((m) => ({ label: m.name, value: m.name })),
                         ...['固化温度', '固化时间', '搅拌速度', '搅拌时间', '反应温度', '压力'].map((x) => ({
@@ -402,11 +409,18 @@ export default function LabCenter() {
                         (option?.value || '').toLowerCase().includes(input.toLowerCase())
                       }
                     />
-                    <Input
+                    <AutoComplete
                       placeholder="单位"
                       value={f.unit}
-                      style={{ width: 90 }}
-                      onChange={(e) => updateFactors(idx, { unit: e.target.value })}
+                      style={{ width: 100 }}
+                      options={['℃', 'min', 'h', 'rpm', 'MPa', '%', 'g', 'L', 'mPa·s'].map((u) => ({
+                        label: u,
+                        value: u,
+                      }))}
+                      onChange={(v) => updateFactors(idx, { unit: v })}
+                      filterOption={(input, option) =>
+                        (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                      }
                     />
                     <Input
                       type="number"
