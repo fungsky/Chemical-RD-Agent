@@ -32,6 +32,8 @@ class ExperimentResult(BaseModel):
     id: Optional[str] = None
     experiment_id: str = Field(..., description="实验编号（唯一）")
     formula_name: str = Field(..., description="配方名称")
+    formula_code: Optional[str] = Field(None, description="关联配方编号")
+    formula_version: Optional[str] = Field(None, description="关联配方版本")
     project: str = Field("", description="所属项目")
     batch_number: Optional[str] = Field(None, description="批次号")
     status: ExperimentStatus = Field(ExperimentStatus.COMPLETED)

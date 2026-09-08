@@ -14,7 +14,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api';
 
@@ -49,10 +49,15 @@ export default function LabCenter() {
   const [expOpen, setExpOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
   const [expForm] = Form.useForm();
+  const [formulaOptions, setFormulaOptions] = useState<any[]>([]);
+  const [metricRows, setMetricRows] = useState<any[]>([
+    { name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined },
+  ]);
+  const [availableProps, setAvailableProps] = useState<any[]>([]);
 
   const [predItems, setPredItems] = useState<any[]>([{ name: '', function: '基础树脂', weight_percent: 100 }]);
   const [predCat, setPredCat] = useState('胶粘剂');
-  const [predProps, setPredProps] = useState('硬度, 附着力');
+  const [predProps, setPredProps] = useState<any[]>([]);
   const [predRes, setPredRes] = useState<any[]>([]);
   const [trainRes, setTrainRes] = useState<any>(null);
   const [predLoading, setPredLoading] = useState(false);
@@ -94,6 +99,22 @@ export default function LabCenter() {
 
   useEffect(() => {
     loadExperiments();
+    api
+      .get('/formulas', { params: { keyword: '', limit: 200 } })
+      .then((res) => {
+        const list = res.data || [];
+        setFormulaOptions(list);
+        const counts: Record<string, number> = {};
+        for (const row of list) {
+          for (const p of row.formula?.performance || []) {
+            counts[p.test_name] = (counts[p.test_name] || 0) + 1;
+          }
+        }
+        setAvailableProps(
+          Object.entries(counts).map(([name, samples]) => ({ name, samples })),
+        );
+      })
+      .catch(() => setFormulaOptions([]));
   }, []);
 
   const generateDoe = async () => {
@@ -127,27 +148,33 @@ export default function LabCenter() {
   };
 
   const addExperiment = async (values: any) => {
-    let condition = { items: [], process: {} };
     let measurements: Record<string, number> = {};
     let specTargets: Record<string, any> = {};
-    try {
-      if (values.condition_text) condition = JSON.parse(values.condition_text);
-      if (values.measurements_text) measurements = JSON.parse(values.measurements_text);
-      if (values.spec_targets_text) specTargets = JSON.parse(values.spec_targets_text);
-    } catch {
-      message.warning('条件/测量/目标规格 JSON 格式不正确');
-      return;
+    let measurement_units: Record<string, string> = {};
+    for (const row of values.metric_rows || []) {
+      const name = (row.name || '').trim();
+      if (!name) continue;
+      measurements[name] = Number(row.value ?? 0);
+      if (row.unit) measurement_units[name] = row.unit;
+      const spec: any = { unit: row.unit || '' };
+      if (row.min !== undefined && row.min !== null && row.min !== '') spec.min = Number(row.min);
+      if (row.max !== undefined && row.max !== null && row.max !== '') spec.max = Number(row.max);
+      if (row.target !== undefined && row.target !== null && row.target !== '') spec.target = Number(row.target);
+      specTargets[name] = spec;
     }
     const payload: any = {
       experiment_id: values.experiment_id,
       formula_name: values.formula_name,
+      formula_code: values.formula_code,
+      formula_version: values.formula_version,
       project: values.project,
       batch_number: values.batch_number,
       status: values.status,
       operator: values.operator,
       doe_method: values.doe_method,
-      condition,
+      condition: values.condition || { items: [], process: {} },
       measurements,
+      measurement_units,
       spec_targets: specTargets,
       notes: values.notes,
     };
@@ -222,7 +249,7 @@ export default function LabCenter() {
     }
     setPredLoading(true);
     try {
-      const props = predProps.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      const props = predProps;
       const res = await api.post('/predict', { items, category: predCat, target_properties: props });
       setPredRes(res.data || []);
     } catch (e: any) {
@@ -237,7 +264,7 @@ export default function LabCenter() {
   const train = async () => {
     setTrainLoading(true);
     try {
-      const props = predProps.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+      const props = predProps;
       const res = await api.post('/predict/train', { target_properties: props });
       setTrainRes(res.data?.results || {});
       message.success('训练完成，请查看可信度');
@@ -295,18 +322,39 @@ export default function LabCenter() {
 
   const openEditExp = (row: any) => {
     setEditingExp(row);
+    const specs = row.spec_targets || {};
+    const metricRows = Object.keys(row.measurements || {}).map((name) => ({
+      name,
+      value: row.measurements[name],
+      unit: row.measurement_units?.[name] || specs[name]?.unit || '',
+      min: specs[name]?.min,
+      max: specs[name]?.max,
+      target: specs[name]?.target,
+    }));
     expForm.setFieldsValue({
       experiment_id: row.experiment_id,
+      formula_code: row.formula_code || '',
+      formula_version: row.formula_version || '',
       formula_name: row.formula_name,
       project: row.project,
       batch_number: row.batch_number,
       status: 'completed',
       operator: row.operator,
       doe_method: row.doe_method,
-      condition_text: row.condition ? JSON.stringify(row.condition, null, 2) : '',
-      measurements_text: row.measurements && Object.keys(row.measurements).length ? JSON.stringify(row.measurements, null, 2) : '',
-      spec_targets_text: row.spec_targets && Object.keys(row.spec_targets).length ? JSON.stringify(row.spec_targets, null, 2) : '',
+      metric_rows: metricRows.length
+        ? metricRows
+        : [{ name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined }],
       notes: row.notes,
+    });
+    setExpOpen(true);
+  };
+
+  const openNewExp = () => {
+    setEditingExp(null);
+    expForm.resetFields();
+    expForm.setFieldsValue({
+      status: 'completed',
+      metric_rows: [{ name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined }],
     });
     setExpOpen(true);
   };
@@ -317,7 +365,7 @@ export default function LabCenter() {
       items={[
         {
           key: 'doe',
-          label: 'DOE 实验设计',
+          label: '实验设计（DOE）',
           children: (
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               <Card style={{ borderRadius: 12 }}>
@@ -406,11 +454,7 @@ export default function LabCenter() {
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
-                  onClick={() => {
-                    setEditingExp(null);
-                    expForm.resetFields();
-                    setExpOpen(true);
-                  }}
+                  onClick={openNewExp}
                 >
                   录入实验
                 </Button>
@@ -436,11 +480,17 @@ export default function LabCenter() {
               <Card title="输入配方与目标指标" style={{ borderRadius: 12 }}>
                 <Space wrap style={{ marginBottom: 10 }}>
                   <Select value={predCat} onChange={setPredCat} style={{ width: 180 }} options={CATEGORIES.map((c) => ({ label: c, value: c }))} />
-                  <Input
-                    style={{ width: 300 }}
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    style={{ minWidth: 420 }}
                     value={predProps}
-                    onChange={(e) => setPredProps(e.target.value)}
-                    placeholder="目标性能，逗号分隔，如：硬度, 附着力"
+                    onChange={(v) => setPredProps(v)}
+                    placeholder="选择目标性能（下方为可用指标与样本数）"
+                    options={availableProps.map((p) => ({
+                      label: `${p.name}（${p.samples} 条）`,
+                      value: p.name,
+                    }))}
                   />
                 </Space>
                 {predItems.map((item, idx) => (
@@ -549,8 +599,31 @@ export default function LabCenter() {
             <Form.Item name="experiment_id" label="实验编号" rules={[{ required: true }]}>
               <Input style={{ width: 220 }} />
             </Form.Item>
-            <Form.Item name="formula_name" label="配方名称" rules={[{ required: true }]}>
-              <Input style={{ width: 220 }} />
+            <Form.Item name="formula_code" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="formula_version" hidden>
+              <Input />
+            </Form.Item>
+            <Form.Item name="formula_name" label="关联配方" rules={[{ required: true }]}>
+              <Select
+                showSearch
+                style={{ width: 280 }}
+                placeholder="选择配方"
+                optionFilterProp="label"
+                options={formulaOptions.map((r: any) => ({
+                  label: `${r.formula?.code} | ${r.formula?.name}`,
+                  value: r.formula?.code,
+                }))}
+                onChange={(code) => {
+                  const hit = formulaOptions.find((r: any) => r.formula?.code === code);
+                  expForm.setFieldsValue({
+                    formula_code: code,
+                    formula_version: hit?.formula?.version || '1.0',
+                    formula_name: hit?.formula?.name || code,
+                  });
+                }}
+              />
             </Form.Item>
           </Space>
           <Space wrap>
@@ -581,23 +654,39 @@ export default function LabCenter() {
               <Select allowClear style={{ width: 180 }} options={METHODS} />
             </Form.Item>
           </Space>
-          <Form.Item
-            name="condition_text"
-            label="配方条件 JSON（可选）"
-            tooltip='格式：{"items":[{"material_name":"环氧树脂E-51","material_function":"基础树脂","weight_percent":40}]}'
-          >
-            <Input.TextArea rows={3} placeholder='{"items":[...], "process":{}}' />
-          </Form.Item>
-          <Form.Item name="measurements_text" label="性能实测 JSON（可选）" tooltip='格式：{"硬度": 80, "附着力": 3}'>
-            <Input.TextArea rows={3} placeholder='{"硬度": 80, "附着力": 3}' />
-          </Form.Item>
-          <Form.Item
-            name="spec_targets_text"
-            label="目标规格 JSON（可选，用于自动判定）"
-            tooltip='格式：{"硬度": {"min": 75, "max": 85, "unit": "H"}, "附着力": {"min": 3}}'
-          >
-            <Input.TextArea rows={3} placeholder='{"硬度": {"min": 75, "max": 85}, "附着力": {"min": 3}}' />
-          </Form.Item>
+          <Typography.Title level={5}>检测结果（指标/实测值/单位/目标范围）</Typography.Title>
+          <Form.List name="metric_rows">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field) => (
+                  <Space key={field.key} align="baseline" style={{ display: 'flex', marginBottom: 6 }}>
+                    <Form.Item name={[field.name, 'name']} rules={[{ required: true, message: '指标' }]}>
+                      <Input placeholder="指标名（如 硬度）" style={{ width: 150 }} />
+                    </Form.Item>
+                    <Form.Item name={[field.name, 'value']}>
+                      <Input type="number" placeholder="实测值" style={{ width: 100 }} />
+                    </Form.Item>
+                    <Form.Item name={[field.name, 'unit']}>
+                      <Input placeholder="单位" style={{ width: 80 }} />
+                    </Form.Item>
+                    <Form.Item name={[field.name, 'min']}>
+                      <Input type="number" placeholder="目标≥" style={{ width: 100 }} />
+                    </Form.Item>
+                    <Form.Item name={[field.name, 'max']}>
+                      <Input type="number" placeholder="目标≤" style={{ width: 100 }} />
+                    </Form.Item>
+                    <Form.Item name={[field.name, 'target']}>
+                      <Input type="number" placeholder="目标值" style={{ width: 100 }} />
+                    </Form.Item>
+                    <DeleteOutlined onClick={() => remove(field.name)} />
+                  </Space>
+                ))}
+                <Button type="dashed" block onClick={() => add({ name: '', value: undefined, unit: '', min: undefined, max: undefined })}>
+                  + 添加检测指标
+                </Button>
+              </>
+            )}
+          </Form.List>
           <Form.Item name="notes" label="备注">
             <Input.TextArea rows={2} />
           </Form.Item>
