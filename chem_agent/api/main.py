@@ -51,6 +51,7 @@ from chem_agent.api.quality_router import router as quality_router
 from chem_agent.api.process_router import router as process_router
 from chem_agent.api.risk_router import router as risk_router
 from chem_agent.api.wiki_router import router as wiki_router
+from chem_agent.api.rd_router import router as rd_router
 
 logger = logging.getLogger(__name__)
 
@@ -268,6 +269,7 @@ app.include_router(quality_router)
 app.include_router(process_router)
 app.include_router(risk_router)
 app.include_router(wiki_router)
+app.include_router(rd_router)
 
 
 # ============ 请求/响应模型 ============
