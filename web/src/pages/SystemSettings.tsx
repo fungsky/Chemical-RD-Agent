@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   App,
-  AutoComplete,
   Button,
   Card,
   Form,
@@ -16,7 +15,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api';
 
@@ -55,6 +54,14 @@ interface AuditRow {
   details?: string;
   status?: string;
 }
+
+const AUDIT_STATUS_META: Record<string, { label: string; color: string }> = {
+  success: { label: '成功', color: 'green' },
+  failed: { label: '失败', color: 'red' },
+  error: { label: '错误', color: 'red' },
+  warning: { label: '警告', color: 'orange' },
+  skipped: { label: '已跳过', color: 'default' },
+};
 
 const AI_PRESETS: Record<string, { base_url: string; chat_model: string; emb_model: string }> = {
   ollama: { base_url: 'http://localhost:11434/v1', chat_model: 'qwen2.5:14b', emb_model: '' },
@@ -141,6 +148,9 @@ export default function SystemSettings() {
 
   const [llm, setLlm] = useState<any>({});
   const [emb, setEmb] = useState<any>({});
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [manualModel, setManualModel] = useState(false);
   const [testing, setTesting] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
 
@@ -202,6 +212,35 @@ export default function SystemSettings() {
     }
   };
 
+  const fetchModels = async () => {
+    if (!llm.base_url) {
+      message.warning('请先填写 Base URL 再读取模型列表');
+      return;
+    }
+    setLoadingModels(true);
+    try {
+      const res = await api.post('/admin/llm/models', {
+        provider: llm.provider,
+        base_url: llm.base_url,
+        api_key: llm.api_key_input || llm.api_key || '',
+      });
+      if (res.data?.success && res.data?.models?.length) {
+        setFetchedModels(res.data.models);
+        message.success(`已从服务商读取 ${res.data.models.length} 个模型`);
+        if (!llm.model) {
+          setLlm((prev: any) => ({ ...prev, model: res.data.models[0] }));
+        }
+      } else {
+        message.error(res.data?.error || '读取模型列表失败，请检查 Base URL / API Key');
+      }
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      message.error(typeof d === 'string' ? d : '读取模型列表失败');
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
   const saveLlm = async () => {
     setSavingAi(true);
     try {
@@ -252,7 +291,7 @@ export default function SystemSettings() {
         provider: llm.provider,
         base_url: llm.base_url,
         model: llm.model,
-        api_key: llm.api_key_input || '',
+        api_key: llm.api_key_input || llm.api_key || '',
         test_type: 'chat',
       });
       if (res.data?.success) {
@@ -362,7 +401,16 @@ export default function SystemSettings() {
     { title: '动作', dataIndex: 'action', width: 180 },
     { title: '对象', dataIndex: 'resource_type', width: 120 },
     { title: '资源ID', dataIndex: 'resource_id', width: 140 },
-    { title: '状态', dataIndex: 'status', width: 90 },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (v) => {
+        if (!v) return '-';
+        const meta = AUDIT_STATUS_META[v] || { label: v, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
   ];
 
   return (
@@ -381,6 +429,8 @@ export default function SystemSettings() {
                       value={llm.provider}
                       onChange={(v) => {
                         const p = AI_PRESETS[v] || AI_PRESETS.custom_openai;
+                        setFetchedModels([]);
+                        setManualModel(false);
                         setLlm({ ...llm, provider: v, base_url: p.base_url, model: p.chat_model });
                       }}
                       options={PROVIDERS.map((p) => ({ label: p, value: p }))}
@@ -394,17 +444,54 @@ export default function SystemSettings() {
                       onChange={(e) => setLlm({ ...llm, base_url: e.target.value })}
                     />
                   </ConfigRow>
-                  <ConfigRow label="模型 / 模型强度" tip="不同模型能力与速度不同；可在下拉选择，也可直接输入模型名">
-                    <AutoComplete
-                      style={{ width: 420 }}
-                      value={llm.model || ''}
-                      options={(AI_MODELS[llm.provider] || []).map((m) => ({ label: m, value: m }))}
-                      placeholder="选择或输入模型名，如 glm-4-flash"
-                      onChange={(v) => setLlm({ ...llm, model: v })}
-                      filterOption={(input, option) =>
-                        (option?.value || '').toLowerCase().includes(input.toLowerCase())
-                      }
-                    />
+                  <ConfigRow
+                    label="模型 / 模型强度"
+                    tip="点击“读取模型列表”后从服务商拉取实际可用模型，并在下拉中选择；也可切换为手动输入"
+                  >
+                    {manualModel ? (
+                      <Space.Compact style={{ width: 560 }}>
+                        <Input
+                          style={{ width: 420 }}
+                          value={llm.model || ''}
+                          placeholder="输入自定义模型名，如 glm-4-flash"
+                          onChange={(e) => setLlm({ ...llm, model: e.target.value })}
+                        />
+                        <Button onClick={() => setManualModel(false)}>返回列表</Button>
+                      </Space.Compact>
+                    ) : (
+                      <>
+                        <Space.Compact style={{ width: 560 }}>
+                          <Select
+                            showSearch
+                            allowClear
+                            style={{ width: 400 }}
+                            value={llm.model || undefined}
+                            placeholder="读取后从下拉选择模型"
+                            optionFilterProp="label"
+                            onChange={(v) => setLlm({ ...llm, model: v })}
+                            options={(fetchedModels.length
+                              ? fetchedModels
+                              : AI_MODELS[llm.provider] || []
+                            ).map((m) => ({ label: m, value: m }))}
+                            notFoundContent={
+                              loadingModels ? '正在读取模型列表…' : '暂无模型，请点击右侧“读取模型列表”'
+                            }
+                          />
+                          <Button
+                            icon={<ReloadOutlined />}
+                            loading={loadingModels}
+                            onClick={fetchModels}
+                          >
+                            读取模型列表
+                          </Button>
+                        </Space.Compact>
+                        <div style={{ marginTop: 4 }}>
+                          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setManualModel(true)}>
+                            需要手动输入自定义模型？
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </ConfigRow>
                   <ConfigRow label="API Key" tip="留空表示保持当前已保存密钥不变">
                     <Input.Password
@@ -554,7 +641,7 @@ export default function SystemSettings() {
                       <Typography.Text strong>显示 AI 思考过程</Typography.Text>
                       <br />
                       <Typography.Text type="secondary">
-                        开启后，智能体模式的每步推理、工具调用与分析过程会在问答下方折叠展示。
+                        开启后，接入支持深度思考的模型（如 GLM-4.5 / GLM-5）时，AI 回答下方会折叠显示 LLM 真实的推理内容；关闭则不请求思考，回答更快。工具调用过程单独展示，不依赖此开关。
                       </Typography.Text>
                     </div>
                   </Space>

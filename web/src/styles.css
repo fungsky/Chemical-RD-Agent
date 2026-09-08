@@ -22,13 +22,13 @@ body {
 }
 
 .chat-scroll {
-  height: calc(100vh - 210px);
+  height: calc(100vh - 185px);
   overflow-y: auto;
   padding: 8px 4px;
 }
 
 .message {
-  max-width: 82%;
+  max-width: 96%;
   padding: 10px 14px;
   border-radius: 12px;
   white-space: pre-wrap;

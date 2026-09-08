@@ -37,6 +37,13 @@ interface Rq {
   created_at?: string;
 }
 
+const REQUEST_STATUS_META: Record<string, { label: string; color: string }> = {
+  open: { label: '待处理', color: 'orange' },
+  sampling: { label: '打样中', color: 'blue' },
+  review: { label: '评审中', color: 'purple' },
+  done: { label: '已完成', color: 'green' },
+};
+
 export default function Workbench() {
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -149,7 +156,9 @@ export default function Workbench() {
   };
 
   const selected = requests.find((r) => r.id === selectedId) || null;
-  const statusColor: Record<string, string> = { open: 'orange', sampling: 'blue', review: 'purple', done: 'green' };
+  const selectedStatus = selected
+    ? REQUEST_STATUS_META[selected.status || 'open'] || { label: selected.status || '', color: 'default' }
+    : null;
 
   return (
     <Row gutter={16}>
@@ -158,22 +167,28 @@ export default function Workbench() {
           <List
             size="small"
             dataSource={requests}
-            renderItem={(r) => (
-              <List.Item
-                style={{ cursor: 'pointer', padding: '6px 4px' }}
-                onClick={() => setSelectedId(r.id)}
-              >
-                <Space direction="vertical" size={0}>
-                  <Typography.Text strong={r.id === selectedId}>
-                    {r.customer} · {r.title}
-                  </Typography.Text>
-                  <Space size={6}>
-                    <Tag color={statusColor[r.status || 'open']} style={{ margin: 0 }}>{r.status}</Tag>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{r.id}</Typography.Text>
+            renderItem={(r) => {
+              const meta = REQUEST_STATUS_META[r.status || 'open'] || {
+                label: r.status || '',
+                color: 'default',
+              };
+              return (
+                <List.Item
+                  style={{ cursor: 'pointer', padding: '6px 4px' }}
+                  onClick={() => setSelectedId(r.id)}
+                >
+                  <Space direction="vertical" size={0}>
+                    <Typography.Text strong={r.id === selectedId}>
+                      {r.customer} · {r.title}
+                    </Typography.Text>
+                    <Space size={6}>
+                      <Tag color={meta.color} style={{ margin: 0 }}>{meta.label}</Tag>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>{r.id}</Typography.Text>
+                    </Space>
                   </Space>
-                </Space>
-              </List.Item>
-            )}
+                </List.Item>
+              );
+            }}
           />
           <Button type="dashed" block icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             新建需求
@@ -186,7 +201,11 @@ export default function Workbench() {
           {selected && (
             <Card
               title={`${selected.customer} | ${selected.title}`}
-              extra={<Tag color={statusColor[selected.status || 'open']}>{selected.status}</Tag>}
+              extra={
+                <Tag color={selectedStatus?.color || 'default'}>
+                  {selectedStatus?.label || selected.status}
+                </Tag>
+              }
               style={{ borderRadius: 12 }}
             >
               <Typography.Paragraph type="secondary">{selected.requirement || '暂无需求描述'}</Typography.Paragraph>

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from chem_agent.rd.models import ClientRequest, SampleRecord, TimelineEvent
+from chem_agent.utils.status_labels import REQUEST_STATUS_ZH
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ class RDManager:
             event_id=uuid.uuid4().hex,
             request_id=request_id,
             event_type="note",
-            summary=f"需求更新：{req.title} → {req.status}",
+            summary=f"需求更新：{req.title} → {REQUEST_STATUS_ZH.get(req.status, req.status)}",
         ))
         self._save()
         return req

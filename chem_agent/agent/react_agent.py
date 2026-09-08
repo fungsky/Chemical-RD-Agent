@@ -12,7 +12,7 @@ import logging
 import re
 from typing import TYPE_CHECKING, Optional
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.language_models import BaseChatModel
 
@@ -82,6 +82,19 @@ class ReActAgent:
         # 构建系统提示词（仅包含有权限的工具）
         tool_defs = {name: td for name, (td, _) in available.items()}
         system_prompt = build_react_system_prompt(tool_defs)
+        history_messages = []
+        for h in chat_history or []:
+            if isinstance(h, dict):
+                role = str(h.get("role", "")).lower()
+                content = h.get("content")
+                if role == "user":
+                    history_messages.append(HumanMessage(content=str(content or "")))
+                elif role in ("assistant", "ai"):
+                    history_messages.append(AIMessage(content=str(content or "")))
+            elif getattr(h, "type", "") in ("human", "user"):
+                history_messages.append(HumanMessage(content=getattr(h, "content", "") or ""))
+            elif getattr(h, "type", "") in ("ai", "assistant"):
+                history_messages.append(AIMessage(content=getattr(h, "content", "") or ""))
 
         # ========== 预处理：并行执行规划 + 记忆检索 ==========
         plan_steps = None
@@ -141,6 +154,7 @@ class ReActAgent:
 
             messages = [
                 SystemMessage(content=system_prompt),
+                *history_messages,
                 HumanMessage(content=user_content),
             ]
 

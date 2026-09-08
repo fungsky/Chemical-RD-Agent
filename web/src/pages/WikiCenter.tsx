@@ -40,6 +40,12 @@ interface WikiHit {
   similarity_score?: number;
 }
 
+const WIKI_STATUS_META: Record<string, { label: string; color: string }> = {
+  draft: { label: '草稿', color: 'default' },
+  reviewed: { label: '已复核', color: 'orange' },
+  approved: { label: '已通过', color: 'green' },
+};
+
 export default function WikiCenter() {
   const { message } = App.useApp();
   const [docs, setDocs] = useState<DocRow[]>([]);
@@ -203,7 +209,15 @@ export default function WikiCenter() {
 
   const pageColumns: ColumnsType<WikiPageRow> = [
     { title: '页面', dataIndex: 'title' },
-    { title: '状态', dataIndex: 'status', width: 100, render: (v) => <Tag color={v === 'approved' ? 'green' : 'orange'}>{v}</Tag> },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (v) => {
+        const meta = WIKI_STATUS_META[v] || { label: v, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
     { title: '创建时间', dataIndex: 'created_at', width: 190 },
     {
       title: '操作',
@@ -342,6 +356,7 @@ export default function WikiCenter() {
           options={[
             { value: 'draft', label: '草稿' },
             { value: 'reviewed', label: '已复核' },
+            { value: 'approved', label: '已通过' },
           ]}
         />
       </Space>

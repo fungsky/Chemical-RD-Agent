@@ -7,6 +7,13 @@ from pydantic import BaseModel
 
 from chem_agent.auth.dependencies import require_permission
 from chem_agent.auth.models import UserOut
+from chem_agent.utils.status_labels import (
+    EXPERIMENT_STATUS_ZH,
+    FORMULA_STATUS_ZH,
+    REQUEST_STATUS_ZH,
+    SAMPLE_STATUS_ZH,
+    translate,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rd", tags=["R&D Context"])
@@ -105,7 +112,7 @@ def _todos_for(mgr, request):
         for code in request.get("formula_codes") or []:
             formula = kg_service.get_formula(code)
             if formula and formula.status.value in ("review", "draft"):
-                todos.append({"type": "formula_review", "title": f"配方 {code} 状态：{formula.status.value}，待复核", "ref": code})
+                todos.append({"type": "formula_review", "title": f"配方 {code} 状态：{translate(formula.status.value, FORMULA_STATUS_ZH)}，待复核", "ref": code})
     except Exception:
         pass
 
@@ -188,8 +195,8 @@ async def next_step(payload: NextStepRequest, _user: UserOut = Depends(require_p
         f"需求：{req.get('title')}",
         f"要求：{req.get('requirement') or '无'}",
         f"关联配方：{', '.join(req.get('formula_codes') or [])}",
-        f"最近样品反馈：{json_dump(samples[-3:]) if samples else '无'}",
-        f"最近实验：{json_dump([{'id': e.experiment_id, 'formula': e.formula_name, 'status': e.status.value, 'measurements': e.measurements} for e in recent_experiments]) if recent_experiments else '无'}",
+        f"最近样品反馈：{json_dump([{**s, 'feedback_status': translate(s.get('feedback_status'), SAMPLE_STATUS_ZH)} for s in samples[-3:]]) if samples else '无'}",
+        f"最近实验：{json_dump([{'id': e.experiment_id, 'formula': e.formula_name, 'status': translate(e.status.value, EXPERIMENT_STATUS_ZH), 'measurements': e.measurements} for e in recent_experiments]) if recent_experiments else '无'}",
         f"待办：{json_dump(todos)}",
         f"最近动态：{json_dump(timeline[:10])}",
     ]
@@ -236,7 +243,7 @@ async def project_report(request_id: str = Query(...), _user: UserOut = Depends(
         "",
         f"- 需求编号：{req.get('id')}",
         f"- 客户/项目：{req.get('customer')}",
-        f"- 状态：{req.get('status')}",
+        f"- 状态：{translate(req.get('status'), REQUEST_STATUS_ZH)}",
         f"- 需求描述：{req.get('requirement') or '无'}",
         "",
         "## 关联配方",
@@ -252,12 +259,12 @@ async def project_report(request_id: str = Query(...), _user: UserOut = Depends(
 
     lines.extend(["", "## 样品与客户反馈"])
     for s in samples or [{"sample_id": "无"}]:
-        lines.append(f"- {s.get('sample_id')}：{s.get('feedback_status')} - {s.get('feedback') or '暂无'}")
+        lines.append(f"- {s.get('sample_id')}：{translate(s.get('feedback_status'), SAMPLE_STATUS_ZH)} - {s.get('feedback') or '暂无'}")
 
     lines.extend(["", "## 实验记录与结果"])
     for e in experiments or []:
         lines.append(
-            f"- {e.experiment_id}（{e.formula_name}）：{e.status.value}，实测 {json_dump(e.measurements) if e.measurements else '未记录'}"
+            f"- {e.experiment_id}（{e.formula_name}）：{translate(e.status.value, EXPERIMENT_STATUS_ZH)}，实测 {json_dump(e.measurements) if e.measurements else '未记录'}"
         )
 
     conclusion = "暂无足够数据生成 AI 结论。"

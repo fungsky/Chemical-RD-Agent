@@ -1,0 +1,424 @@
+[
+  {
+    "name": "WHO配方1·乙醇型免洗手消毒液(80% v/v)",
+    "code": "PUB-WHO-E80",
+    "version": "1.0",
+    "category": "其他",
+    "description": "WHO推荐的乙醇型醇类手消毒液参考配方（80%乙醇 v/v）。来源为美国NIH DailyMed收录的按WHO指南生产的OTC产品标签。",
+    "target_application": "手部卫生消毒",
+    "creator": "公开资料整理",
+    "tags": ["WHO", "免洗手消毒液", "乙醇", "公开配方", "参考配方"],
+    "notes": "官方来源：NIH DailyMed NDC 79363-800（WHO Hand Sanitizer Formula, 80% Ethanol）https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=a9dc12b0-b035-1016-e053-2995a90a9244&type=display 。原方各浓度按体积百分比(v/v)给出：乙醇80%、甘油1.45%、过氧化氢0.125%、纯化水补足。实际生产需按WHO指南用96%乙醇/3%过氧化氢/98%甘油投料；本条目为最终产品组成，仅供学习研究，生产须另行合规验证。",
+    "items": [
+      {
+        "material": {"name": "乙醇(USP/FCC级)", "cas_number": "64-17-5", "chemical_name": "Ethanol", "function": "其他"},
+        "weight_percent": 80.0,
+        "addition_order": 1,
+        "notes": "80% v/v，原方为有效成分"
+      },
+      {
+        "material": {"name": "甘油(USP级)", "cas_number": "56-81-5", "chemical_name": "Glycerol", "function": "其他"},
+        "weight_percent": 1.45,
+        "addition_order": 2,
+        "notes": "1.45% v/v，保湿剂"
+      },
+      {
+        "material": {"name": "过氧化氢(USP级)", "cas_number": "7722-84-1", "chemical_name": "Hydrogen peroxide", "function": "其他"},
+        "weight_percent": 0.125,
+        "addition_order": 3,
+        "notes": "0.125% v/v"
+      },
+      {
+        "material": {"name": "纯化水(无菌蒸馏水或冷开水)", "cas_number": "7732-18-5", "chemical_name": "Purified water", "function": "溶剂"},
+        "weight_percent": 18.425,
+        "addition_order": 4,
+        "notes": "补足至100% v/v"
+      }
+    ],
+    "process": {
+      "notes": "WHO制备法：用96%乙醇、3%过氧化氢、98%甘油及无菌蒸馏水/冷开水按WHO指南配制；乙醇型配方闪点较低，生产与储运须远离火源。"
+    }
+  },
+  {
+    "name": "WHO配方2·异丙醇型免洗手消毒液(75% v/v)",
+    "code": "PUB-WHO-IPA75",
+    "version": "1.0",
+    "category": "其他",
+    "description": "WHO推荐的异丙醇型醇类手消毒液参考配方（75%异丙醇 v/v）。来源为美国NIH DailyMed收录的按WHO指南生产的OTC产品标签。",
+    "target_application": "手部卫生消毒",
+    "creator": "公开资料整理",
+    "tags": ["WHO", "免洗手消毒液", "异丙醇", "公开配方", "参考配方"],
+    "notes": "官方来源：NIH DailyMed NDC 66348-0000（Hand Sanitizer, isopropyl alcohol 75% v/v）https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=a2db8d8a-c80c-fa6c-e053-2995a90a7b58&type=display 。原方各浓度按体积百分比(v/v)：异丙醇75%、甘油1.45%、过氧化氢0.125%、纯化水补足。本条目为最终产品组成，仅供学习研究，生产须另行合规验证。",
+    "items": [
+      {
+        "material": {"name": "异丙醇(USP级)", "cas_number": "67-63-0", "chemical_name": "Isopropyl alcohol", "function": "其他"},
+        "weight_percent": 75.0,
+        "addition_order": 1,
+        "notes": "75% v/v，原方为有效成分"
+      },
+      {
+        "material": {"name": "甘油(USP级)", "cas_number": "56-81-5", "chemical_name": "Glycerol", "function": "其他"},
+        "weight_percent": 1.45,
+        "addition_order": 2,
+        "notes": "1.45% v/v，保湿剂"
+      },
+      {
+        "material": {"name": "过氧化氢(USP级)", "cas_number": "7722-84-1", "chemical_name": "Hydrogen peroxide", "function": "其他"},
+        "weight_percent": 0.125,
+        "addition_order": 3,
+        "notes": "0.125% v/v"
+      },
+      {
+        "material": {"name": "纯化水(无菌蒸馏水或冷开水)", "cas_number": "7732-18-5", "chemical_name": "Purified water", "function": "溶剂"},
+        "weight_percent": 23.425,
+        "addition_order": 4,
+        "notes": "补足至100% v/v"
+      }
+    ],
+    "process": {
+      "notes": "WHO制备法：按WHO指南投料，成品浓度异丙醇75% v/v；异丙醇型配方闪点约18℃左右，生产与储运须远离火源。"
+    }
+  },
+  {
+    "name": "液体餐具洗涤剂(Liquid Dishwashing Compound)",
+    "code": "PUB-DISH-01",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的液体餐具洗涤剂参考组成：直链烷基苯磺酸盐为主表面活性剂，己二醇为水溶性偶合剂。",
+    "target_application": "手洗餐具洗涤",
+    "creator": "公开资料整理",
+    "tags": ["餐具洗涤剂", "LAS", "表面活性剂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 13959，SOAPS AND DETERGENTS / Liquid Dishwashing Compound）https://cheman.chemnet.com/chem_recipes/search.cgi?id=13959 。原方香水0.25–0.5，本条目按下限0.25计；该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 57.5,
+        "addition_order": 1
+      },
+      {
+        "material": {"name": "直链烷基苯磺酸钠(LAS,\"Nacconol\" Z Flakes)", "cas_number": "25155-30-0", "chemical_name": "Sodium linear alkylbenzenesulfonate", "function": "其他"},
+        "weight_percent": 35.0,
+        "addition_order": 2,
+        "notes": "主表面活性剂"
+      },
+      {
+        "material": {"name": "2-甲基-2,4-戊二醇(己二醇)", "cas_number": "107-41-5", "chemical_name": "2-Methyl-2,4-pentanediol", "function": "溶剂"},
+        "weight_percent": 7.5,
+        "addition_order": 3,
+        "notes": "偶合剂/水溶性溶剂"
+      },
+      {
+        "material": {"name": "香精", "function": "其他"},
+        "weight_percent": 0.25,
+        "addition_order": 4,
+        "notes": "原方0.25–0.5，按0.25计"
+      }
+    ]
+  },
+  {
+    "name": "地毯清洁香波(Rug Shampoo)",
+    "code": "PUB-RUGSHAMPOO-01",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的地毯清洁香波参考组成，以月桂基硫酸钠(28%水溶液)为主表面活性剂。原配方给出的外观为清澈液体，活性物约10.6%。",
+    "target_application": "地毯清洁",
+    "creator": "公开资料整理",
+    "tags": ["地毯清洁", "SLS", "表面活性剂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 10219，DETERGENTS / Rug Shampoo）https://cheman.chemnet.com/chem_recipes/search.cgi?id=10219 。SLS 28%指商品水溶液浓度；该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 75.0,
+        "addition_order": 1
+      },
+      {
+        "material": {"name": "月桂基硫酸钠(28%水溶液)", "cas_number": "151-21-3", "chemical_name": "Sodium lauryl sulfate", "function": "其他"},
+        "weight_percent": 20.0,
+        "addition_order": 2,
+        "notes": "28%商品水溶液"
+      },
+      {
+        "material": {"name": "\"Monamate\" LA-100", "function": "其他"},
+        "weight_percent": 5.0,
+        "addition_order": 3,
+        "notes": "泡沫增效/澄清助剂(商品名)"
+      }
+    ],
+    "process": {
+      "temperature": 65,
+      "notes": "将SLS与水混合加热搅拌，缓慢加入Monamate LA-100，加热至60–70℃后冷却。使用稀释比例约1盎司/加仑。"
+    }
+  },
+  {
+    "name": "杀菌地毯清洁香波(Germicidal Rug Shampoo)",
+    "code": "PUB-RUGSHAMPOO-G01",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的杀菌型地毯清洁香波参考组成（按重量份计：三聚磷酸钠1、防霉剂2、表面活性剂12、水85）。",
+    "target_application": "地毯清洁杀菌",
+    "creator": "公开资料整理",
+    "tags": ["地毯清洁", "杀菌", "表面活性剂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 7950，SOAPS AND CLEANERS / Germicidal Rug Shampoo）https://cheman.chemnet.com/chem_recipes/search.cgi?id=7950 。原文以Parts计：Sodium Tripolyphosphate 1 / Preventol GDC 2 / Igepon TC-42 12 / Water 85，合计100份。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "三聚磷酸钠", "cas_number": "7758-29-4", "chemical_name": "Sodium tripolyphosphate", "function": "其他"},
+        "weight_percent": 1.0,
+        "addition_order": 1,
+        "notes": "螯合/助洗剂"
+      },
+      {
+        "material": {"name": "\"Preventol\" GDC", "function": "其他"},
+        "weight_percent": 2.0,
+        "addition_order": 2,
+        "notes": "防霉/防腐剂(商品名)"
+      },
+      {
+        "material": {"name": "\"Igepon\" TC-42", "function": "其他"},
+        "weight_percent": 12.0,
+        "addition_order": 3,
+        "notes": "表面活性剂(商品名)"
+      },
+      {
+        "material": {"name": "水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 85.0,
+        "addition_order": 4
+      }
+    ]
+  },
+  {
+    "name": "椰油-油酸液体洗手皂(Coconut-Oleic Hand Soap)",
+    "code": "PUB-HANDSOAP-CO01",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的液体洗手皂参考组成：蒸馏椰子脂肪酸与油酸皂化制得的钾皂体系，适用于液体皂泵瓶。",
+    "target_application": "液体洗手皂",
+    "creator": "公开资料整理",
+    "tags": ["液体皂", "椰子脂肪酸", "油酸", "钾皂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 7883，SOAPS AND CLEANERS / Coconut-Oleic Hand Soap）https://cheman.chemnet.com/chem_recipes/search.cgi?id=7883 。原文Water/To make 100.0，即水补足至100；本条目水按84.0计。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "蒸馏椰子脂肪酸(皂化值约263)", "cas_number": "61788-89-4", "chemical_name": "Distilled coconut fatty acids", "function": "其他"},
+        "weight_percent": 6.5,
+        "addition_order": 1,
+        "notes": "皂化原料"
+      },
+      {
+        "material": {"name": "油酸(Emersol 211,低凝固点型)", "cas_number": "112-80-1", "chemical_name": "Oleic acid", "function": "其他"},
+        "weight_percent": 6.5,
+        "addition_order": 2,
+        "notes": "皂化原料"
+      },
+      {
+        "material": {"name": "氢氧化钾(100%)", "cas_number": "1310-58-3", "chemical_name": "Potassium hydroxide", "function": "其他"},
+        "weight_percent": 3.0,
+        "addition_order": 3,
+        "notes": "皂化用碱"
+      },
+      {
+        "material": {"name": "水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 84.0,
+        "addition_order": 4,
+        "notes": "原文为补足至100"
+      }
+    ],
+    "process": {
+      "notes": "按配方比例将脂肪酸与氢氧化钾皂化，可另加少量松油或香精；也可加微量荧光素示踪(原文备注)。"
+    }
+  },
+  {
+    "name": "椰油洗发皂(35%真皂,Coconut Shampoo)",
+    "code": "PUB-SHAMPOO-C01",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的椰油液体洗发皂参考组成：100%氢氧化钾与蒸馏椰子脂肪酸反应制得约35%真皂体系。",
+    "target_application": "液体洗发/洗护",
+    "creator": "公开资料整理",
+    "tags": ["洗发", "椰油皂", "钾皂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 8600，COSMETICS AND DRUGS / Coconut Shampoo, 35% real Soap）https://cheman.chemnet.com/chem_recipes/search.cgi?id=8600 。原文Water/To make 100.0；本条目水按62.5计（氢氧化钾7.9+椰子脂肪酸29.6+水62.5=100）。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "蒸馏椰子脂肪酸(皂化值约266)", "cas_number": "61788-89-4", "chemical_name": "Distilled coconut fatty acids", "function": "其他"},
+        "weight_percent": 29.6,
+        "addition_order": 1,
+        "notes": "皂化原料"
+      },
+      {
+        "material": {"name": "氢氧化钾(100%)", "cas_number": "1310-58-3", "chemical_name": "Potassium hydroxide", "function": "其他"},
+        "weight_percent": 7.9,
+        "addition_order": 2,
+        "notes": "皂化用碱"
+      },
+      {
+        "material": {"name": "水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 62.5,
+        "addition_order": 3,
+        "notes": "原文为补足至100"
+      }
+    ],
+    "process": {
+      "temperature": 65,
+      "notes": "原文：氢氧化钾溶于所需水量并加热至120–130°F(约49–54℃)，缓慢加入脂肪酸并搅拌至皂化完成，反应后期加热至150–160°F(约66–71℃)；皂液静置数天澄清后使用。"
+    }
+  },
+  {
+    "name": "防晒日霜SPF8(Suntan Cream SPF 8)",
+    "code": "PUB-SUNCREAM-SPF8",
+    "version": "1.0",
+    "category": "其他",
+    "description": "公开配方库中的SPF8防晒霜参考组成：化学防晒剂(Escalol 507)与紫外吸收剂(Uvinul M40)复配的油包水/水包油乳化体系。",
+    "target_application": "防晒护肤",
+    "creator": "公开资料整理",
+    "tags": ["防晒霜", "SPF8", "化妆品", "紫外吸收剂", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 10957，COSMETICS / Suntan Cream SPF 8）https://cheman.chemnet.com/chem_recipes/search.cgi?id=10957 。各数值组分合计100.0；香精/防腐剂原方为q.s.(适量)，未计入总量。Carbopol为1%水溶液(商品名)。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证并符合化妆品法规。",
+    "items": [
+      {
+        "material": {"name": "蒸馏水", "cas_number": "7732-18-5", "chemical_name": "Water", "function": "溶剂"},
+        "weight_percent": 64.5,
+        "addition_order": 1
+      },
+      {
+        "material": {"name": "SF 1202(挥发性硅油)", "function": "其他"},
+        "weight_percent": 8.5,
+        "addition_order": 2,
+        "notes": "商品名，肤感调节"
+      },
+      {
+        "material": {"name": "Carbopol 1%水溶液", "function": "增稠剂"},
+        "weight_percent": 5.0,
+        "addition_order": 3,
+        "notes": "商品名，1%水溶液"
+      },
+      {
+        "material": {"name": "硬脂酸", "cas_number": "57-11-4", "chemical_name": "Stearic acid", "function": "其他"},
+        "weight_percent": 4.0,
+        "addition_order": 4,
+        "notes": "乳化剂/稠度调节"
+      },
+      {
+        "material": {"name": "Escalol 507(帕地马酯O)", "cas_number": "21245-02-3", "chemical_name": "Padimate O", "function": "紫外稳定剂"},
+        "weight_percent": 4.0,
+        "addition_order": 5,
+        "notes": "化学防晒剂"
+      },
+      {
+        "material": {"name": "葵花籽油", "cas_number": "8001-21-6", "chemical_name": "Sunflower oil", "function": "其他"},
+        "weight_percent": 4.5,
+        "addition_order": 6
+      },
+      {
+        "material": {"name": "三乙醇胺", "cas_number": "102-71-6", "chemical_name": "Triethanolamine", "function": "其他"},
+        "weight_percent": 1.2,
+        "addition_order": 7,
+        "notes": "pH调节/中和"
+      },
+      {
+        "material": {"name": "十六醇(鲸蜡醇)", "cas_number": "36653-82-4", "chemical_name": "Cetyl alcohol", "function": "其他"},
+        "weight_percent": 0.8,
+        "addition_order": 8,
+        "notes": "乳化/稠度调节"
+      },
+      {
+        "material": {"name": "Uvinul M40(二苯酮-3/羟苯甲酮)", "cas_number": "131-57-7", "chemical_name": "Oxybenzone", "function": "紫外稳定剂"},
+        "weight_percent": 2.0,
+        "addition_order": 9,
+        "notes": "UV吸收剂"
+      },
+      {
+        "material": {"name": "SS4267", "function": "其他"},
+        "weight_percent": 5.0,
+        "addition_order": 10,
+        "notes": "商品名，按原文最后加入A相"
+      },
+      {
+        "material": {"name": "SF97(50)硅油", "function": "其他"},
+        "weight_percent": 0.5,
+        "addition_order": 11,
+        "notes": "商品名"
+      }
+    ],
+    "process": {
+      "temperature": 70,
+      "notes": "A相与B相分别加热至70℃(158°F)；B相缓慢加入A相充分混合，冷却至低于45℃(113°F)后加入C相(香精/防腐剂适量)。"
+    }
+  },
+  {
+    "name": "石材防水剂(Masonry Waterproofing)",
+    "code": "PUB-MASONWP-01",
+    "version": "1.0",
+    "category": "涂料",
+    "description": "公开配方库中的石材/砖墙防水剂参考组成：有机硅树脂溶于白油精的稀溶液，加入羟基硬脂酸钛作助剂。",
+    "target_application": "石材/砖墙防水处理",
+    "creator": "公开资料整理",
+    "tags": ["防水剂", "有机硅", "石材", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 7632，PAINTS AND LACQUERS / Masonry Waterproofing）https://cheman.chemnet.com/chem_recipes/search.cgi?id=7632 。原文：Silicone Resin(\"Drisil\" 29) 0.5 / White Spirit 95.0 / Hydroxytitanium Stearate 4.5，合计100。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "白油精/石油溶剂油(White Spirit)", "cas_number": "64742-82-1", "chemical_name": "White spirit / petroleum solvent", "function": "溶剂"},
+        "weight_percent": 95.0,
+        "addition_order": 1
+      },
+      {
+        "material": {"name": "有机硅树脂(\"Drisil\" 29)", "function": "基础树脂"},
+        "weight_percent": 0.5,
+        "addition_order": 2,
+        "notes": "防水活性树脂(商品名)"
+      },
+      {
+        "material": {"name": "羟基硬脂酸钛", "function": "其他"},
+        "weight_percent": 4.5,
+        "addition_order": 3,
+        "notes": "助剂"
+      }
+    ]
+  },
+  {
+    "name": "打字机色带油墨(Typewriter Ribbon Ink)",
+    "code": "PUB-INK-TYPE01",
+    "version": "1.0",
+    "category": "油墨",
+    "description": "公开配方库中的打字机色带油墨参考组成：蜡、染料、颜料与矿物油体系的球磨油墨。",
+    "target_application": "色带/打印耗材",
+    "creator": "公开资料整理",
+    "tags": ["油墨", "色带", "矿物油", "蜡", "ChemNet", "公开配方"],
+    "notes": "来源：中国化工网ChemNet化学配方数据库（配方ID 4408，COATINGS / Typewriter Ribbon Ink）https://cheman.chemnet.com/chem_recipes/search.cgi?id=4408 。原文各组分合计100：Carnauba N.C.#3 15 / Furnace black 12 / Methyl violet base 4 / 100 SUS mineral oil 40 / \"Petrolite\" WB-5 15 / Iron blue 14。该库为历史配方书刊汇编，仅供学习研究，投产需自行验证。",
+    "items": [
+      {
+        "material": {"name": "100 SUS矿物油", "cas_number": "8042-47-5", "chemical_name": "Mineral oil", "function": "溶剂"},
+        "weight_percent": 40.0,
+        "addition_order": 1
+      },
+      {
+        "material": {"name": "巴西棕榈蜡(Carnauba N.C. #3)", "cas_number": "8015-86-9", "chemical_name": "Carnauba wax", "function": "其他"},
+        "weight_percent": 15.0,
+        "addition_order": 2,
+        "notes": "成膜/耐磨蜡"
+      },
+      {
+        "material": {"name": "\"Petrolite\" WB-5蜡", "function": "其他"},
+        "weight_percent": 15.0,
+        "addition_order": 3,
+        "notes": "商品名，石蜡类"
+      },
+      {
+        "material": {"name": "炭黑(Furnace black)", "cas_number": "1333-86-4", "chemical_name": "Carbon black", "function": "颜料"},
+        "weight_percent": 12.0,
+        "addition_order": 4
+      },
+      {
+        "material": {"name": "铁蓝(Iron blue)", "cas_number": "14038-43-8", "chemical_name": "Ferric ferrocyanide", "function": "颜料"},
+        "weight_percent": 14.0,
+        "addition_order": 5
+      },
+      {
+        "material": {"name": "甲基紫碱(Methyl violet base)", "function": "颜料"},
+        "weight_percent": 4.0,
+        "addition_order": 6,
+        "notes": "染料"
+      }
+    ],
+    "process": {
+      "temperature": 104,
+      "notes": "原文：将蜡与染料加入夹套钢球磨，200–215°F(约93–102℃)研磨15–30分钟至蜡熔融、染料溶解，再加入其余物料研磨8–16小时；产品静置数周后使用。"
+    }
+  }
+]

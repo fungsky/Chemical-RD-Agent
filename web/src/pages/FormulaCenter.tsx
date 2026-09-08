@@ -63,16 +63,26 @@ const FUNCTIONS = [
   '其他',
 ];
 
-const STATUS_COLOR: Record<string, string> = {
-  draft: 'default',
-  review: 'orange',
-  approved: 'green',
-  archived: 'gray',
+const FORMULA_STATUS_META: Record<string, { label: string; color: string }> = {
+  draft: { label: '草稿', color: 'default' },
+  review: { label: '审核中', color: 'orange' },
+  approved: { label: '已通过', color: 'green' },
+  archived: { label: '已归档', color: 'gray' },
 };
 
 interface FormulaItem {
   material?: { name?: string; function?: string };
   weight_percent?: number;
+}
+
+interface FormulaProcess {
+  mixing_speed?: number;
+  mixing_time?: number;
+  temperature?: number;
+  pressure?: number;
+  curing_temperature?: number;
+  curing_time?: number;
+  notes?: string;
 }
 
 interface Formula {
@@ -85,6 +95,7 @@ interface Formula {
   target_application?: string;
   items?: FormulaItem[];
   performance?: Array<{ test_name?: string; value?: number; unit?: string }>;
+  process?: FormulaProcess | null;
 }
 
 export default function FormulaCenter() {
@@ -215,6 +226,7 @@ export default function FormulaCenter() {
       category: '胶粘剂',
       items: [{ name: '', function: '基础树脂', weight_percent: 100 }],
       performance: [],
+      process: {},
     });
     setEditOpen(true);
   };
@@ -237,6 +249,15 @@ export default function FormulaCenter() {
         value: p.value,
         unit: p.unit,
       })),
+      process: {
+        mixing_speed: f.process?.mixing_speed,
+        mixing_time: f.process?.mixing_time,
+        temperature: f.process?.temperature,
+        pressure: f.process?.pressure,
+        curing_temperature: f.process?.curing_temperature,
+        curing_time: f.process?.curing_time,
+        notes: f.process?.notes,
+      },
     });
     setEditOpen(true);
   };
@@ -260,6 +281,25 @@ export default function FormulaCenter() {
         value: Number(p.value || 0),
         unit: p.unit || '',
       }));
+    const processRaw = values.process || {};
+    const process: Record<string, number | string> = {};
+    const processNumbers = [
+      'mixing_speed',
+      'mixing_time',
+      'temperature',
+      'pressure',
+      'curing_temperature',
+      'curing_time',
+    ];
+    for (const key of processNumbers) {
+      const v = processRaw[key];
+      if (v !== undefined && v !== null && v !== '') {
+        process[key] = Number(v);
+      }
+    }
+    if (processRaw.notes && String(processRaw.notes).trim()) {
+      process.notes = String(processRaw.notes).trim();
+    }
     setSaving(true);
     try {
       await api.post('/formulas', {
@@ -270,6 +310,7 @@ export default function FormulaCenter() {
         target_application: values.target_application,
         items,
         performance,
+        process: Object.keys(process).length ? process : undefined,
         status: 'draft',
       });
       message.success(editing ? '修改已保存，已生成新版本' : '配方草稿已保存');
@@ -292,7 +333,10 @@ export default function FormulaCenter() {
       title: '状态',
       dataIndex: ['formula', 'status'],
       width: 100,
-      render: (v) => <Tag color={STATUS_COLOR[v] || 'default'}>{v}</Tag>,
+      render: (v) => {
+        const meta = FORMULA_STATUS_META[v] || { label: v, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
     },
     { title: '相似度', dataIndex: 'similarity_score', width: 90, render: (v) => (v ?? '').toFixed?.(2) ?? '-' },
     {
@@ -392,7 +436,13 @@ export default function FormulaCenter() {
               <Descriptions.Item label="版本">{detail.version}</Descriptions.Item>
               <Descriptions.Item label="类别">{detail.category}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <Tag color={STATUS_COLOR[detail.status || '']}>{detail.status}</Tag>
+                {(() => {
+                  const meta = FORMULA_STATUS_META[detail.status || ''] || {
+                    label: detail.status || '',
+                    color: 'default',
+                  };
+                  return <Tag color={meta.color}>{meta.label}</Tag>;
+                })()}
               </Descriptions.Item>
               <Descriptions.Item label="目标应用" span={2}>
                 {detail.target_application || '-'}
@@ -411,6 +461,50 @@ export default function FormulaCenter() {
               dataSource={detail.items || []}
               pagination={false}
             />
+            <Typography.Title level={5} style={{ marginTop: 20 }}>
+              工艺制程
+            </Typography.Title>
+            {detail.process && Object.keys(detail.process).length ? (
+              <Descriptions column={2} bordered size="small">
+                {detail.process.temperature !== undefined && detail.process.temperature !== null && (
+                  <Descriptions.Item label="反应温度">
+                    {detail.process.temperature} ℃
+                  </Descriptions.Item>
+                )}
+                {detail.process.mixing_speed !== undefined && detail.process.mixing_speed !== null && (
+                  <Descriptions.Item label="搅拌速度">
+                    {detail.process.mixing_speed} rpm
+                  </Descriptions.Item>
+                )}
+                {detail.process.mixing_time !== undefined && detail.process.mixing_time !== null && (
+                  <Descriptions.Item label="搅拌时间">
+                    {detail.process.mixing_time} min
+                  </Descriptions.Item>
+                )}
+                {detail.process.pressure !== undefined && detail.process.pressure !== null && (
+                  <Descriptions.Item label="压力">
+                    {detail.process.pressure} MPa
+                  </Descriptions.Item>
+                )}
+                {detail.process.curing_temperature !== undefined && detail.process.curing_temperature !== null && (
+                  <Descriptions.Item label="固化温度">
+                    {detail.process.curing_temperature} ℃
+                  </Descriptions.Item>
+                )}
+                {detail.process.curing_time !== undefined && detail.process.curing_time !== null && (
+                  <Descriptions.Item label="固化时间">
+                    {detail.process.curing_time} h
+                  </Descriptions.Item>
+                )}
+                {detail.process.notes && (
+                  <Descriptions.Item label="工艺备注/步骤" span={2}>
+                    <span style={{ whiteSpace: 'pre-wrap' }}>{detail.process.notes}</span>
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            ) : (
+              <Typography.Text type="secondary">未填写工艺制程</Typography.Text>
+            )}
             {!!detail.performance?.length && (
               <>
                 <Typography.Title level={5}>性能</Typography.Title>
@@ -557,6 +651,39 @@ export default function FormulaCenter() {
               </>
             )}
           </Form.List>
+
+          <Typography.Title level={5} style={{ marginTop: 16 }}>
+            工艺制程（可选）
+          </Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -4 }}>
+            填写反应/搅拌/固化等关键参数；公开来源没有工艺时留空，不要凭经验编造。加料顺序与完整操作步骤可写在“工艺备注/步骤”。
+          </Typography.Paragraph>
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Form.Item name={['process', 'temperature']} label="反应温度">
+              <Input type="number" style={{ width: 140 }} placeholder="如 70" addonAfter="℃" />
+            </Form.Item>
+            <Form.Item name={['process', 'mixing_speed']} label="搅拌速度">
+              <Input type="number" style={{ width: 140 }} placeholder="如 600" addonAfter="rpm" />
+            </Form.Item>
+            <Form.Item name={['process', 'mixing_time']} label="搅拌时间">
+              <Input type="number" style={{ width: 140 }} placeholder="如 30" addonAfter="min" />
+            </Form.Item>
+            <Form.Item name={['process', 'pressure']} label="压力">
+              <Input type="number" style={{ width: 140 }} placeholder="如 0.1" addonAfter="MPa" />
+            </Form.Item>
+            <Form.Item name={['process', 'curing_temperature']} label="固化温度">
+              <Input type="number" style={{ width: 140 }} placeholder="如 80" addonAfter="℃" />
+            </Form.Item>
+            <Form.Item name={['process', 'curing_time']} label="固化时间">
+              <Input type="number" style={{ width: 140 }} placeholder="如 2" addonAfter="h" />
+            </Form.Item>
+          </Space>
+          <Form.Item name={['process', 'notes']} label="工艺备注/步骤">
+            <Input.TextArea
+              rows={3}
+              placeholder="按顺序填写：投料、加热、搅拌、pH/粘度控制、稀释、固化等。"
+            />
+          </Form.Item>
         </Form>
       </Modal>
     </Space>

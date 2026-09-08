@@ -360,6 +360,126 @@ class LLMService:
         )
         return response
 
+    async def chat_with_reasoning(
+        self,
+        user_message: str,
+        graph_stats: str = "",
+        rag_context: str = "",
+        chat_history: Optional[list] = None,
+    ) -> tuple[str, Optional[str]]:
+        """通用对话并尝试捕获模型的真实思考内容（reasoning_content/thinking）。
+
+        部分推理模型（如 GLM-4.5/5、DeepSeek-R1）会在回答之外返回
+        reasoning_content；LangChain 官方 ChatOpenAI 会丢弃该字段，
+        因此这里对 OpenAI 兼容接口做一次原生调用。
+        """
+        provider = settings.llm_provider
+        base_url = (settings.llm_base_url or "").strip().rstrip("/")
+
+        # Azure 原生路径与 OpenAI 兼容路径不同，暂时退回普通对话
+        if provider == "azure_openai" or not base_url:
+            reply = await self.chat(
+                user_message=user_message,
+                graph_stats=graph_stats,
+                rag_context=rag_context,
+                chat_history=chat_history,
+            )
+            return reply, None
+
+        import httpx
+        import re
+
+        system_text = SYSTEM_PROMPT.format(
+            graph_stats=graph_stats,
+            rag_context=rag_context,
+        )
+        messages: list[dict] = [{"role": "system", "content": system_text}]
+        for h in chat_history or []:
+            if isinstance(h, dict):
+                role = str(h.get("role", "")).lower()
+                if role == "ai":
+                    role = "assistant"
+                content = h.get("content") or h.get("text")
+            else:
+                role = "assistant" if getattr(h, "type", "") == "ai" else "user"
+                content = getattr(h, "content", None)
+            if role in ("system", "user", "assistant") and content:
+                messages.append({"role": role, "content": str(content)})
+        messages.append({"role": "user", "content": user_message})
+
+        body: dict = {
+            "model": settings.llm_model,
+            "messages": messages,
+            "temperature": settings.llm_temperature,
+            "max_tokens": settings.llm_max_tokens,
+        }
+        model_lower = (settings.llm_model or "").lower()
+        glm_thinking_markers = ("glm-4.5", "glm-4.6", "glm-4.7", "glm-5")
+        if provider == "zhipu" and any(m in model_lower for m in glm_thinking_markers):
+            body["thinking"] = {"type": "enabled"}
+        if provider in ("openai", "custom_openai") and settings.llm_reasoning_effort:
+            body["reasoning_effort"] = settings.llm_reasoning_effort
+
+        try:
+            async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
+                resp = await client.post(
+                    f"{base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.llm_api_key or 'not-needed'}",
+                    },
+                    json=body,
+                )
+                data = resp.json()
+                if resp.status_code != 200:
+                    raise RuntimeError(f"LLM API 返回 {resp.status_code}: {str(data)[:300]}")
+
+            choice = (data.get("choices") or [{}])[0]
+            message = choice.get("message") or {}
+            content = message.get("content")
+            if isinstance(content, list):
+                parts = []
+                for block in content:
+                    if isinstance(block, dict):
+                        parts.append(block.get("text") or block.get("content") or "")
+                content = "".join(parts)
+            content = str(content or "").strip()
+
+            thinking = message.get("reasoning_content")
+            if thinking is None:
+                thinking = message.get("thinking")
+            if thinking is None:
+                thinking = message.get("reasoning")
+            if isinstance(thinking, list):
+                thinking = "\n".join(
+                    str(b.get("text") or b.get("content") or "")
+                    for b in thinking
+                    if isinstance(b, dict)
+                )
+            thinking = str(thinking or "").strip()
+
+            # 兼容把思考放在 <think>/<thinking> 标签里的模型
+            if not thinking:
+                tag_match = re.search(r"<(?:think|thinking)>(.*?)</(?:think|thinking)>", content, re.DOTALL)
+                if tag_match:
+                    thinking = tag_match.group(1).strip()
+                    content = re.sub(
+                        r"<(?:think|thinking)>.*?</(?:think|thinking)>",
+                        "",
+                        content,
+                        flags=re.DOTALL,
+                    ).strip()
+
+            return content, (thinking[:30000] if thinking else None)
+        except Exception as e:
+            logger.warning("LLM 原生思考内容获取失败，退回普通对话: %s", e)
+            reply = await self.chat(
+                user_message=user_message,
+                graph_stats=graph_stats,
+                rag_context=rag_context,
+                chat_history=chat_history,
+            )
+            return reply, None
+
     async def analyze_formula(self, formula: Formula) -> str:
         """配方分析"""
         items_text = "\n".join(

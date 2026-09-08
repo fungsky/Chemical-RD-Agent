@@ -12,10 +12,34 @@ from chem_agent.models import (
     Formula,
     FormulaItem,
     PerformanceTest,
+    ProcessCondition,
     FormulaSearchResult,
 )
 
 logger = logging.getLogger(__name__)
+
+
+_PROCESS_KEYS = (
+    "mixing_speed",
+    "mixing_time",
+    "temperature",
+    "pressure",
+    "curing_temperature",
+    "curing_time",
+)
+
+
+def _extract_process(node) -> Optional[ProcessCondition]:
+    """从 Formula 节点中还原工艺制程对象。"""
+    props: dict = {}
+    for key in _PROCESS_KEYS:
+        value = node.get(key)
+        if value is not None:
+            props[key] = value
+    notes = node.get("process_notes")
+    if notes:
+        props["notes"] = notes
+    return ProcessCondition(**props) if props else None
 
 
 class KnowledgeGraphService:
@@ -291,28 +315,27 @@ class KnowledgeGraphService:
                     items=items_data,
                 )
 
-            # 5) 存储工艺条件
-            if formula.process:
-                session.run(
-                    """
-                    MATCH (f:Formula {code: $code})
-                    SET f.mixing_speed = $mixing_speed,
-                        f.mixing_time = $mixing_time,
-                        f.temperature = $temperature,
-                        f.pressure = $pressure,
-                        f.curing_temperature = $curing_temperature,
-                        f.curing_time = $curing_time,
-                        f.process_notes = $process_notes
-                    """,
-                    code=formula.code or formula.name,
-                    mixing_speed=formula.process.mixing_speed,
-                    mixing_time=formula.process.mixing_time,
-                    temperature=formula.process.temperature,
-                    pressure=formula.process.pressure,
-                    curing_temperature=formula.process.curing_temperature,
-                    curing_time=formula.process.curing_time,
-                    process_notes=formula.process.notes,
-                )
+            # 5) 存储工艺制程（无 process 时清空旧字段，避免残留）
+            session.run(
+                """
+                MATCH (f:Formula {code: $code})
+                SET f.mixing_speed = $mixing_speed,
+                    f.mixing_time = $mixing_time,
+                    f.temperature = $temperature,
+                    f.pressure = $pressure,
+                    f.curing_temperature = $curing_temperature,
+                    f.curing_time = $curing_time,
+                    f.process_notes = $process_notes
+                """,
+                code=formula.code or formula.name,
+                mixing_speed=formula.process.mixing_speed if formula.process else None,
+                mixing_time=formula.process.mixing_time if formula.process else None,
+                temperature=formula.process.temperature if formula.process else None,
+                pressure=formula.process.pressure if formula.process else None,
+                curing_temperature=formula.process.curing_temperature if formula.process else None,
+                curing_time=formula.process.curing_time if formula.process else None,
+                process_notes=formula.process.notes if formula.process else None,
+            )
 
             # 6) 清除旧性能数据并创建新的
             session.run(
@@ -408,6 +431,7 @@ class KnowledgeGraphService:
                 tags=node.get("tags", []),
                 notes=node.get("notes"),
                 status=node.get("status", "draft"),
+                process=_extract_process(node),
             )
 
     def search_formulas(
@@ -488,11 +512,17 @@ class KnowledgeGraphService:
                     id=str(node.element_id),
                     name=node["name"],
                     code=node["code"],
+                    version=node.get("version", "1.0"),
                     category=node.get("category", "其他"),
                     description=node.get("description"),
                     items=item_list,
                     performance=perfs,
+                    target_application=node.get("target_application"),
+                    creator=node.get("creator"),
                     tags=node.get("tags", []),
+                    notes=node.get("notes"),
+                    status=node.get("status", "draft"),
+                    process=_extract_process(node),
                 )
 
                 # 材料匹配过滤

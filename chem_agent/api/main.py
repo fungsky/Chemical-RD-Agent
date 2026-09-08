@@ -279,17 +279,21 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[list] = None
     use_agent: bool = False
+    show_thinking: bool = False
 
 
 class SaveFormulaFromTextRequest(BaseModel):
     requirement: str = ""
     text: str = Field(..., description="AI 回复的配方文本")
     category: str = "其他"
+    name: Optional[str] = Field(None, description="用户指定的配方名称（覆盖 AI 解析结果）")
+    code: Optional[str] = Field(None, description="用户指定的配方编号（覆盖自动编号）")
     target_performance: dict = {}
 
 
 class ChatResponse(BaseModel):
     reply: str
+    thinking: Optional[str] = None
 
 
 class FormulaAnalysisResponse(BaseModel):
@@ -383,6 +387,12 @@ class LLMTestRequest(BaseModel):
     model: str
     api_key: str = ""
     test_type: str = "chat"  # "chat" 或 "embedding"
+
+
+class LLMModelsRequest(BaseModel):
+    provider: str
+    base_url: str = ""
+    api_key: str = ""
 
 
 class EmbeddingConfigPayload(BaseModel):
@@ -623,6 +633,19 @@ async def test_llm_connection(
     if req.provider not in _VALID_PROVIDERS:
         return {"success": False, "latency_ms": 0, "error": f"不支持的 provider: {req.provider}"}
 
+    api_key = (req.api_key or "").strip()
+    if not api_key or "***" in api_key:
+        if settings.llm_provider == req.provider:
+            api_key = settings.llm_api_key or ""
+        elif req.test_type == "embedding" and settings.embedding_provider == req.provider:
+            api_key = settings.embedding_api_key or ""
+    if req.provider in _API_KEY_REQUIRED and not api_key:
+        return {
+            "success": False,
+            "latency_ms": 0,
+            "error": "该服务商需要 API Key，请填写后重试（已保存的 Key 会自动复用）",
+        }
+
     try:
         start = _time.time()
 
@@ -634,7 +657,7 @@ async def test_llm_connection(
                 from langchain_openai import OpenAIEmbeddings as _OAIE
                 emb = _OAIE(
                     base_url=req.base_url,
-                    api_key=req.api_key or "not-needed",
+                    api_key=api_key or "not-needed",
                     model=req.model,
                 )
             await asyncio.wait_for(emb.aembed_query("test"), timeout=15)
@@ -646,7 +669,7 @@ async def test_llm_connection(
                 from langchain_openai import ChatOpenAI as _COAI
                 chat = _COAI(
                     base_url=req.base_url,
-                    api_key=req.api_key or "not-needed",
+                    api_key=api_key or "not-needed",
                     model=req.model,
                     temperature=0,
                 )
@@ -665,6 +688,95 @@ async def test_llm_connection(
         return {"success": False, "latency_ms": 0, "error": error_msg}
 
 
+@app.post("/api/admin/llm/models")
+async def list_llm_models(
+    payload: LLMModelsRequest,
+    _user: UserOut = Depends(require_permission("config:read")),
+):
+    """读取服务商当前可用的模型列表（OpenAI 兼容 /models 接口）。"""
+    import httpx
+    import re
+
+    if payload.provider not in _VALID_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"不支持的 provider: {payload.provider}")
+
+    if payload.provider == "azure_openai":
+        return {
+            "success": False,
+            "models": [],
+            "error": "Azure 不提供远程模型列表读取，请在输入框直接填写 Deployment 名称",
+        }
+
+    base_url = (payload.base_url or "").strip().rstrip("/")
+    if not base_url and settings.llm_provider == payload.provider:
+        base_url = (settings.llm_base_url or "").strip().rstrip("/")
+    if not base_url:
+        return {"success": False, "models": [], "error": "请先填写 Base URL 后再读取模型列表"}
+
+    api_key = (payload.api_key or "").strip()
+    if not api_key or "***" in api_key:
+        if settings.llm_provider == payload.provider:
+            api_key = settings.llm_api_key or ""
+        else:
+            api_key = ""
+
+    candidate_urls: list[str] = []
+    headers = None
+    if payload.provider == "ollama":
+        native_base = re.sub(r"/v1/?$", "", base_url)
+        candidate_urls = [
+            f"{native_base}/api/tags",
+            f"{base_url}/v1/models",
+            f"{base_url}/models",
+        ]
+    else:
+        candidate_urls = [f"{base_url}/models"]
+        if api_key:
+            headers = {"Authorization": f"Bearer {api_key}"}
+
+    last_error = ""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            for url in candidate_urls:
+                try:
+                    resp = await client.get(url, headers=headers or {})
+                    if resp.status_code != 200:
+                        last_error = f"HTTP {resp.status_code}: {str(resp.text)[:200]}"
+                        continue
+                    data = resp.json()
+                    raw_items = data.get("data") or data.get("models") or []
+                    if isinstance(data, list):
+                        raw_items = data
+                    ids = []
+                    for item in raw_items:
+                        if isinstance(item, str):
+                            model_id = item
+                        elif isinstance(item, dict):
+                            model_id = (
+                                item.get("id")
+                                or item.get("name")
+                                or item.get("model")
+                                or item.get("model_name")
+                            )
+                        else:
+                            continue
+                        if model_id:
+                            ids.append(str(model_id).strip())
+                    ids = sorted(set(i for i in ids if i))
+                    if ids:
+                        return {"success": True, "models": ids, "provider": payload.provider}
+                except Exception as e:
+                    last_error = str(e)
+    except Exception as e:
+        last_error = str(e)
+
+    return {
+        "success": False,
+        "models": [],
+        "error": last_error or "读取模型列表失败：服务商可能不支持 /models 接口，请手动输入模型名",
+    }
+
+
 # ============ 对话 API ============
 
 
@@ -681,6 +793,7 @@ async def chat(request: ChatRequest, _user: UserOut = Depends(require_permission
             )
             return {
                 "reply": result.reply,
+                "thinking": None,
                 "steps": [s.model_dump() for s in result.steps],
                 "tools_used": result.tools_used,
                 "iterations": result.iterations,
@@ -721,6 +834,15 @@ async def chat(request: ChatRequest, _user: UserOut = Depends(require_permission
                     rag_context = "\n".join(lines)
             except Exception as e:
                 logger.debug("RAG 检索跳过: %s", e)
+
+        if request.show_thinking:
+            reply, thinking = await llm_service.chat_with_reasoning(
+                user_message=request.message,
+                graph_stats=graph_stats,
+                rag_context=rag_context,
+                chat_history=request.history,
+            )
+            return ChatResponse(reply=reply, thinking=thinking)
 
         reply = await llm_service.chat(
             user_message=request.message,
@@ -845,12 +967,23 @@ async def save_formula_from_text(
                 user_message="无法从回答中识别出可保存的配方，请描述明确的组分/比例或改用『配方推荐』页面",
                 status_code=400,
             )
-        raw.setdefault(
-            "code",
-            "AI-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
-        )
+        if request.name and request.name.strip():
+            raw["name"] = request.name.strip()
+        if request.code and request.code.strip():
+            raw["code"] = request.code.strip()
+        else:
+            raw.setdefault(
+                "code",
+                "AI-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
+            )
         formula = Formula(**raw)
         existing = kg_service.get_formula(formula.code) if formula.code else None
+        if existing is not None:
+            raise ChemAgentError(
+                error_code=ErrorCode.INPUT_INVALID,
+                user_message=f"配方编号 {formula.code} 已存在，请更换编号或留空自动生成",
+                status_code=409,
+            )
         formula_id = kg_service.upsert_formula(formula)
         _cache.clear()
 

@@ -8,6 +8,7 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -28,6 +29,29 @@ const METHODS = [
 ];
 
 const CATEGORIES = ['涂料', '胶粘剂', '密封剂', '树脂', '塑料', '橡胶', '油墨', '其他'];
+
+const EXPERIMENT_STATUS = [
+  { value: 'planned', label: '计划中' },
+  { value: 'running', label: '进行中' },
+  { value: 'completed', label: '已完成' },
+  { value: 'failed', label: '失败' },
+  { value: 'cancelled', label: '已取消' },
+];
+
+const EXPERIMENT_STATUS_META: Record<string, { label: string; color: string }> = {
+  planned: { label: '计划中', color: 'blue' },
+  running: { label: '进行中', color: 'processing' },
+  completed: { label: '已完成', color: 'green' },
+  failed: { label: '失败', color: 'red' },
+  cancelled: { label: '已取消', color: 'default' },
+};
+
+const TRAIN_STATUS_META: Record<string, { label: string; color: string }> = {
+  trained: { label: '已训练', color: 'green' },
+  skipped: { label: '已跳过（样本不足）', color: 'orange' },
+  no_model: { label: '无模型', color: 'red' },
+  evaluated: { label: '已评估', color: 'blue' },
+};
 
 interface FactorRow {
   name: string;
@@ -50,6 +74,7 @@ export default function LabCenter() {
   const [expOpen, setExpOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
   const [expForm] = Form.useForm();
+  const [expProcessText, setExpProcessText] = useState('');
   const [formulaOptions, setFormulaOptions] = useState<any[]>([]);
   const [metricRows, setMetricRows] = useState<any[]>([
     { name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined },
@@ -230,6 +255,16 @@ export default function LabCenter() {
     }
   };
 
+  const removeExperiment = async (experimentId: string) => {
+    try {
+      await api.delete(`/experiments/results/${encodeURIComponent(experimentId)}`);
+      message.success('实验记录已删除');
+      loadExperiments();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '删除失败');
+    }
+  };
+
   const planFromDoe = async () => {
     if (!doeRows.length) {
       message.warning('请先生成 DOE 方案');
@@ -316,7 +351,14 @@ export default function LabCenter() {
     { title: '实验编号', dataIndex: 'experiment_id' },
     { title: '配方', dataIndex: 'formula_name' },
     { title: '项目', dataIndex: 'project' },
-    { title: '状态', dataIndex: 'status', render: (v) => <Tag>{v}</Tag> },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (v) => {
+        const meta = EXPERIMENT_STATUS_META[v] || { label: v, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
     { title: '性能指标', dataIndex: 'measurements', render: (v) => Object.keys(v || {}).join(', ') || '-' },
     {
       title: '目标判定',
@@ -337,11 +379,25 @@ export default function LabCenter() {
     { title: '实验员', dataIndex: 'operator' },
     {
       title: '操作',
-      width: 130,
+      width: 180,
       render: (_, row) => (
-        <Button size="small" disabled={row.status === 'completed'} onClick={() => openEditExp(row)}>
-          填写结果
-        </Button>
+        <Space>
+          <Button size="small" disabled={row.status === 'completed'} onClick={() => openEditExp(row)}>
+            填写结果
+          </Button>
+          <Popconfirm
+            title="删除实验记录"
+            description={`确定删除实验 ${row.experiment_id}？该操作不可恢复。`}
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => removeExperiment(row.experiment_id)}
+          >
+            <Button size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -362,6 +418,10 @@ export default function LabCenter() {
       formula_code: row.formula_code || '',
       formula_version: row.formula_version || '',
       formula_name: row.formula_name,
+      condition:
+        row.condition && Object.keys(row.condition).length
+          ? row.condition
+          : { items: [], process: {} },
       project: row.project,
       batch_number: row.batch_number,
       status: 'completed',
@@ -372,6 +432,7 @@ export default function LabCenter() {
         : [{ name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined }],
       notes: row.notes,
     });
+    setExpProcessText(formatProcessPreview(row.condition?.process));
     setExpOpen(true);
   };
 
@@ -380,8 +441,10 @@ export default function LabCenter() {
     expForm.resetFields();
     expForm.setFieldsValue({
       status: 'completed',
+      condition: { items: [], process: {} },
       metric_rows: [{ name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined }],
     });
+    setExpProcessText('');
     setExpOpen(true);
   };
 
@@ -676,7 +739,14 @@ export default function LabCenter() {
                     dataSource={Object.entries(trainRes).map(([prop, info]: any) => ({ prop, ...info }))}
                     columns={[
                       { title: '指标', dataIndex: 'prop' },
-                      { title: '状态', dataIndex: 'status', render: (v) => <Tag color={v === 'trained' ? 'green' : 'red'}>{v}</Tag> },
+                      {
+                        title: '状态',
+                        dataIndex: 'status',
+                        render: (v) => {
+                          const meta = TRAIN_STATUS_META[v] || { label: v, color: 'default' };
+                          return <Tag color={meta.color}>{meta.label}</Tag>;
+                        },
+                      },
                       { title: '样本数', dataIndex: 'samples' },
                       {
                         title: '数据来源',
@@ -715,6 +785,9 @@ export default function LabCenter() {
         destroyOnClose
       >
         <Form form={expForm} layout="vertical" onFinish={addExperiment}>
+          <Form.Item name="condition" hidden>
+            <Input />
+          </Form.Item>
           <Space wrap>
             <Form.Item name="experiment_id" label="实验编号" rules={[{ required: true }]}>
               <Input style={{ width: 220 }} />
@@ -737,15 +810,26 @@ export default function LabCenter() {
                 }))}
                 onChange={(code) => {
                   const hit = formulaOptions.find((r: any) => r.formula?.code === code);
+                  const process = hit?.formula?.process || {};
                   expForm.setFieldsValue({
                     formula_code: code,
                     formula_version: hit?.formula?.version || '1.0',
                     formula_name: hit?.formula?.name || code,
+                    condition: { items: [], process: { ...process } },
                   });
+                  setExpProcessText(formatProcessPreview(process));
                 }}
               />
             </Form.Item>
           </Space>
+          {expProcessText && (
+            <Typography.Paragraph
+              type="secondary"
+              style={{ whiteSpace: 'pre-wrap', background: '#fafafa', borderRadius: 6, padding: '8px 10px' }}
+            >
+              已带入工艺制程：{expProcessText}
+            </Typography.Paragraph>
+          )}
           <Space wrap>
             <Form.Item name="project" label="项目">
               <Input style={{ width: 200 }} />
@@ -756,13 +840,7 @@ export default function LabCenter() {
             <Form.Item name="status" label="状态" initialValue="completed">
               <Select
                 style={{ width: 130 }}
-                options={[
-                  { value: 'planned', label: 'planned' },
-                  { value: 'running', label: 'running' },
-                  { value: 'completed', label: 'completed' },
-                  { value: 'failed', label: 'failed' },
-                  { value: 'cancelled', label: 'cancelled' },
-                ]}
+                options={EXPERIMENT_STATUS}
               />
             </Form.Item>
           </Space>
@@ -843,6 +921,30 @@ export default function LabCenter() {
   function updatePredItems(idx: number, patch: any) {
     setPredItems((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
   }
+}
+
+const PROCESS_PREVIEW_LABELS: Record<string, { label: string; unit?: string }> = {
+  mixing_speed: { label: '搅拌速度', unit: 'rpm' },
+  mixing_time: { label: '搅拌时间', unit: 'min' },
+  temperature: { label: '反应温度', unit: '℃' },
+  pressure: { label: '压力', unit: 'MPa' },
+  curing_temperature: { label: '固化温度', unit: '℃' },
+  curing_time: { label: '固化时间', unit: 'h' },
+};
+
+function formatProcessPreview(proc: any): string {
+  if (!proc || typeof proc !== 'object') return '';
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(proc)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (key === 'notes') {
+      parts.push(`备注：${value}`);
+      continue;
+    }
+    const meta = PROCESS_PREVIEW_LABELS[key] || { label: key };
+    parts.push(meta.unit ? `${meta.label}(${meta.unit}) ${value}` : `${meta.label} ${value}`);
+  }
+  return parts.join('；');
 }
 
 const FUNCTIONS = [
