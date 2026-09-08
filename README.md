@@ -1,6 +1,6 @@
 <div align="center">
 
-# ChemAgent
+# Chemical R&D Agent
 
 ### 化工研发智能体系统
 
@@ -21,7 +21,7 @@
 
 ## 项目简介
 
-**ChemAgent** 是一款面向化工研发人员的 AI 智能体系统，整合知识图谱、大语言模型、机器学习和向量检索技术，覆盖配方开发全流程——从检索、分析、预测到推荐。
+**Chemical R&D Agent** 是一款面向化工研发人员的 AI 智能体系统，整合知识图谱、大语言模型、机器学习和向量检索技术，覆盖配方开发全流程——从检索、分析、预测到推荐。
 
 ### 核心价值
 
@@ -330,7 +330,7 @@ chem-ai-agent/
 
 <div align="center">
 
-**ChemAgent** — 让 AI 成为化工研发的得力助手
+**Chemical R&D Agent** — 让 AI 成为化工研发的得力助手
 
 </div>
 
