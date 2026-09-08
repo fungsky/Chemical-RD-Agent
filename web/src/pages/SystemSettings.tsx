@@ -55,6 +55,21 @@ interface AuditRow {
   status?: string;
 }
 
+const AI_PRESETS: Record<string, { base_url: string; chat_model: string; emb_model: string }> = {
+  ollama: { base_url: 'http://localhost:11434/v1', chat_model: 'qwen2.5:14b', emb_model: '' },
+  lm_studio: { base_url: 'http://localhost:1234/v1', chat_model: '', emb_model: '' },
+  openai: { base_url: 'https://api.openai.com/v1', chat_model: 'gpt-4o-mini', emb_model: 'text-embedding-3-small' },
+  azure_openai: { base_url: 'https://<resource>.openai.azure.com/', chat_model: '', emb_model: '' },
+  deepseek: { base_url: 'https://api.deepseek.com/v1', chat_model: 'deepseek-chat', emb_model: '' },
+  zhipu: { base_url: 'https://open.bigmodel.cn/api/paas/v4', chat_model: 'glm-4-flash', emb_model: 'embedding-3' },
+  qwen: { base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', chat_model: 'qwen-plus', emb_model: 'text-embedding-v3' },
+  moonshot: { base_url: 'https://api.moonshot.cn/v1', chat_model: 'moonshot-v1-8k', emb_model: '' },
+  yi: { base_url: 'https://api.lingyiwanwu.com/v1', chat_model: 'yi-lightning', emb_model: '' },
+  gemini: { base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', chat_model: 'gemini-2.0-flash', emb_model: 'text-embedding-004' },
+  anthropic: { base_url: 'https://api.anthropic.com/v1', chat_model: 'claude-3-5-sonnet-20241022', emb_model: '' },
+  custom_openai: { base_url: '', chat_model: '', emb_model: '' },
+};
+
 function ConfigRowEditor({ row, onSave }: { row: ConfigRow; onSave: (value: string) => void }) {
   const [value, setValue] = useState(row.value || '');
   const secretLike = row.key.toLowerCase().includes('key') || row.key.toLowerCase().includes('secret');
@@ -92,6 +107,26 @@ export default function SystemSettings() {
     window.dispatchEvent(new Event('chem-ui-settings'));
   };
 
+  const [llm, setLlm] = useState<any>({});
+  const [emb, setEmb] = useState<any>({});
+  const [testing, setTesting] = useState(false);
+  const [savingAi, setSavingAi] = useState(false);
+
+  const PROVIDERS = [
+    'ollama',
+    'lm_studio',
+    'openai',
+    'azure_openai',
+    'deepseek',
+    'zhipu',
+    'qwen',
+    'moonshot',
+    'yi',
+    'gemini',
+    'anthropic',
+    'custom_openai',
+  ];
+
   const changeTheme = (value: 'light' | 'dark') => {
     setThemeMode(value);
     localStorage.setItem('chem_theme', value);
@@ -113,21 +148,89 @@ export default function SystemSettings() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [c, u, r, a] = await Promise.all([
+      const [c, u, r, a, l, e] = await Promise.all([
         api.get('/admin/config'),
         api.get('/admin/users'),
         api.get('/admin/roles'),
         api.get('/admin/audit', { params: { page: 1, limit: 100 } }),
+        api.get('/admin/llm/config'),
+        api.get('/admin/embedding/config'),
       ]);
       setConfigs(c.data || []);
       setUsers(u.data || []);
       setRoles(r.data || []);
       setAudits(a.data?.items || []);
       setAuditTotal(a.data?.total || 0);
+      setLlm(l.data || {});
+      setEmb(e.data || {});
     } catch (e: any) {
       message.error(e?.response?.data?.detail || '系统设置加载失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveLlm = async () => {
+    setSavingAi(true);
+    try {
+      await api.post('/admin/llm/config', {
+        provider: llm.provider,
+        base_url: llm.base_url,
+        model: llm.model,
+        api_key: llm.api_key_input || '',
+        azure_deployment: llm.azure_deployment || '',
+        azure_api_version: llm.azure_api_version || '',
+        max_tokens: Number(llm.max_tokens || 4096),
+        temperature: Number(llm.temperature || 0.7),
+      });
+      message.success('LLM 配置已保存并生效');
+      loadAll();
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      message.error(typeof d === 'string' ? d : 'LLM 保存失败');
+    } finally {
+      setSavingAi(false);
+    }
+  };
+
+  const saveEmb = async () => {
+    setSavingAi(true);
+    try {
+      await api.post('/admin/embedding/config', {
+        provider: emb.provider,
+        base_url: emb.base_url,
+        model: emb.model,
+        api_key: emb.api_key_input || '',
+      });
+      message.success('Embedding 配置已保存并生效');
+      loadAll();
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      message.error(typeof d === 'string' ? d : 'Embedding 保存失败');
+    } finally {
+      setSavingAi(false);
+    }
+  };
+
+  const testLlm = async () => {
+    setTesting(true);
+    try {
+      const res = await api.post('/admin/llm/test', {
+        provider: llm.provider,
+        base_url: llm.base_url,
+        model: llm.model,
+        api_key: llm.api_key_input || '',
+        test_type: 'chat',
+      });
+      if (res.data?.success) {
+        message.success(`连接成功，延迟 ${res.data.latency_ms}ms`);
+      } else {
+        message.error(res.data?.error || '连接失败');
+      }
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '测试失败');
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -233,6 +336,139 @@ export default function SystemSettings() {
     <Card style={{ borderRadius: 12 }} loading={loading}>
       <Tabs
         items={[
+          {
+            key: 'ai',
+            label: 'AI 服务接入',
+            children: (
+              <Space direction="vertical" size={18} style={{ width: '100%' }}>
+                <Card title="LLM（对话/推理）" style={{ maxWidth: 860 }}>
+                  <Space wrap>
+                    <Select
+                      style={{ width: 200 }}
+                      value={llm.provider}
+                      onChange={(v) => {
+                        const p = AI_PRESETS[v] || AI_PRESETS.custom_openai;
+                        setLlm({ ...llm, provider: v, base_url: p.base_url, model: p.chat_model });
+                      }}
+                      options={PROVIDERS.map((p) => ({ label: p, value: p }))}
+                    />
+                    <Input
+                      style={{ width: 320 }}
+                      placeholder="Base URL"
+                      value={llm.base_url || ''}
+                      onChange={(e) => setLlm({ ...llm, base_url: e.target.value })}
+                    />
+                    <Input
+                      style={{ width: 220 }}
+                      placeholder="Model"
+                      value={llm.model || ''}
+                      onChange={(e) => setLlm({ ...llm, model: e.target.value })}
+                    />
+                    <Input.Password
+                      style={{ width: 300 }}
+                      placeholder={llm.api_key ? `已配置：${llm.api_key}（留空保持不变）` : 'API Key'}
+                      value={llm.api_key_input || ''}
+                      onChange={(e) => setLlm({ ...llm, api_key_input: e.target.value })}
+                    />
+                  </Space>
+                  {llm.provider === 'azure_openai' && (
+                    <Space style={{ marginTop: 10 }}>
+                      <Input
+                        style={{ width: 260 }}
+                        placeholder="Azure Deployment"
+                        value={llm.azure_deployment || ''}
+                        onChange={(e) => setLlm({ ...llm, azure_deployment: e.target.value })}
+                      />
+                      <Input
+                        style={{ width: 160 }}
+                        placeholder="API Version"
+                        value={llm.azure_api_version || '2024-02-01'}
+                        onChange={(e) => setLlm({ ...llm, azure_api_version: e.target.value })}
+                      />
+                    </Space>
+                  )}
+                  <Space style={{ marginTop: 12 }}>
+                    <Input
+                      style={{ width: 120 }}
+                      type="number"
+                      addonBefore="Max tokens"
+                      value={llm.max_tokens ?? 4096}
+                      onChange={(e) => setLlm({ ...llm, max_tokens: Number(e.target.value) })}
+                    />
+                    <Input
+                      style={{ width: 110 }}
+                      type="number"
+                      step={0.1}
+                      addonBefore="温度"
+                      value={llm.temperature ?? 0.7}
+                      onChange={(e) => setLlm({ ...llm, temperature: Number(e.target.value) })}
+                    />
+                  </Space>
+                  <div style={{ marginTop: 14 }}>
+                    <Space>
+                      <Button type="primary" loading={savingAi} onClick={saveLlm}>
+                        保存 LLM
+                      </Button>
+                      <Button loading={testing} onClick={testLlm}>
+                        测试连接
+                      </Button>
+                    </Space>
+                  </div>
+                </Card>
+                <Card title="Embedding（知识库向量化）" style={{ maxWidth: 860 }}>
+                  <Space wrap>
+                    <Select
+                      style={{ width: 200 }}
+                      value={emb.provider || 'same_as_llm'}
+                      onChange={(v) => {
+                        const p = v === 'same_as_llm' ? null : AI_PRESETS[v] || null;
+                        setEmb({
+                          ...emb,
+                          provider: v,
+                          base_url: v === 'same_as_llm' ? '' : p?.base_url || '',
+                          model: v === 'same_as_llm' ? '' : p?.emb_model || '',
+                        });
+                      }}
+                      options={[
+                        { label: 'same_as_llm（复用 LLM）', value: 'same_as_llm' },
+                        ...PROVIDERS.map((p) => ({ label: p, value: p })),
+                      ]}
+                    />
+                    <Input
+                      style={{ width: 320 }}
+                      placeholder="Base URL"
+                      value={emb.base_url || ''}
+                      onChange={(e) => setEmb({ ...emb, base_url: e.target.value })}
+                    />
+                    <Input
+                      style={{ width: 220 }}
+                      placeholder="Embedding Model"
+                      value={emb.model || ''}
+                      onChange={(e) => setEmb({ ...emb, model: e.target.value })}
+                    />
+                    <Input.Password
+                      style={{ width: 300 }}
+                      placeholder={emb.api_key ? `已配置：${emb.api_key}（留空保持不变）` : 'API Key'}
+                      value={emb.api_key_input || ''}
+                      onChange={(e) => setEmb({ ...emb, api_key_input: e.target.value })}
+                    />
+                  </Space>
+                  <div style={{ marginTop: 14 }}>
+                    <Button type="primary" loading={savingAi} onClick={saveEmb}>
+                      保存 Embedding
+                    </Button>
+                  </div>
+                </Card>
+                <Card title="支持的接入方式" size="small" style={{ maxWidth: 860 }}>
+                  <Typography.Paragraph type="secondary">
+                    Ollama / LM Studio / OpenAI / Azure OpenAI / DeepSeek / Zhipu(智谱) / Qwen(通义) /
+                    Moonshot(Kimi) / Yi / Gemini / Anthropic / 自定义 OpenAI 兼容接口。
+                    选择厂商会自动带出 Base URL 与推荐模型，再填入 API Key 即可。
+                  </Typography.Paragraph>
+                </Card>
+              </Space>
+            ),
+          },
           {
             key: 'ux',
             label: '界面功能',
