@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   App,
+  AutoComplete,
   Button,
   Card,
   Form,
@@ -68,6 +69,21 @@ const AI_PRESETS: Record<string, { base_url: string; chat_model: string; emb_mod
   gemini: { base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', chat_model: 'gemini-2.0-flash', emb_model: 'text-embedding-004' },
   anthropic: { base_url: 'https://api.anthropic.com/v1', chat_model: 'claude-3-5-sonnet-20241022', emb_model: '' },
   custom_openai: { base_url: '', chat_model: '', emb_model: '' },
+};
+
+const AI_MODELS: Record<string, string[]> = {
+  ollama: ['qwen2.5:14b', 'qwen2.5:32b', 'llama3.1:8b', 'glm4:9b'],
+  lm_studio: ['qwen2.5-14b-instruct', 'mistral-nemo', 'gemma-2-9b'],
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
+  azure_openai: ['gpt-4o', 'gpt-4o-mini'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+  zhipu: ['glm-4-flash', 'glm-4-air', 'glm-4-plus', 'glm-4.5', 'glm-5', 'glm-5-flash'],
+  qwen: ['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen3-coder-plus'],
+  moonshot: ['moonshot-v1-8k', 'moonshot-v1-32k', 'kimi-k2'],
+  yi: ['yi-lightning', 'yi-large'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-7-sonnet', 'claude-sonnet-4'],
+  custom_openai: [],
 };
 
 function ConfigRow({ label, tip, children }: { label: string; tip?: string; children: ReactNode }) {
@@ -377,12 +393,16 @@ export default function SystemSettings() {
                       onChange={(e) => setLlm({ ...llm, base_url: e.target.value })}
                     />
                   </ConfigRow>
-                  <ConfigRow label="模型" tip="如 glm-4-flash / deepseek-chat / gpt-4o-mini">
-                    <Input
-                      style={{ width: 320 }}
-                      placeholder="Model"
+                  <ConfigRow label="模型 / 模型强度" tip="不同模型能力与速度不同；可在下拉选择，也可直接输入模型名">
+                    <AutoComplete
+                      style={{ width: 420 }}
                       value={llm.model || ''}
-                      onChange={(e) => setLlm({ ...llm, model: e.target.value })}
+                      options={(AI_MODELS[llm.provider] || []).map((m) => ({ label: m, value: m }))}
+                      placeholder="选择或输入模型名，如 glm-4-flash"
+                      onChange={(v) => setLlm({ ...llm, model: v })}
+                      filterOption={(input, option) =>
+                        (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                      }
                     />
                   </ConfigRow>
                   <ConfigRow label="API Key" tip="留空表示保持当前已保存密钥不变">
