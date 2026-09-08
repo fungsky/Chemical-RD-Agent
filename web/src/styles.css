@@ -52,6 +52,10 @@ body {
 html[data-theme='dark'] body {
   background: #0f141d;
 }
+html[data-theme='dark'] .login-card {
+  background: #1b2230 !important;
+  color: #e5e7eb;
+}
 html[data-theme='dark'] .message-assistant {
   background: #1b2230;
   border-color: #2a3244;
