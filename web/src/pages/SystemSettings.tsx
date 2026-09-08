@@ -7,6 +7,7 @@ import {
   Input,
   Modal,
   Select,
+  Slider,
   Space,
   Switch,
   Table,
@@ -79,6 +80,29 @@ export default function SystemSettings() {
   const [showThinking, setShowThinking] = useState(
     localStorage.getItem('chem_show_thinking') !== '0',
   );
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(
+    localStorage.getItem('chem_theme') === 'dark' ? 'dark' : 'light',
+  );
+  const [fontScale, setFontScale] = useState(() => {
+    const v = Number(localStorage.getItem('chem_font_scale') || '1');
+    return Number.isFinite(v) && v >= 0.8 && v <= 1.4 ? v : 1;
+  });
+
+  const notifySettings = () => {
+    window.dispatchEvent(new Event('chem-ui-settings'));
+  };
+
+  const changeTheme = (value: 'light' | 'dark') => {
+    setThemeMode(value);
+    localStorage.setItem('chem_theme', value);
+    notifySettings();
+  };
+
+  const changeFontScale = (value: number) => {
+    setFontScale(value);
+    localStorage.setItem('chem_font_scale', String(value));
+    notifySettings();
+  };
 
   const changeShowThinking = (checked: boolean) => {
     setShowThinking(checked);
@@ -225,6 +249,32 @@ export default function SystemSettings() {
                       </Typography.Text>
                     </div>
                   </Space>
+                  <Space align="center" style={{ width: '100%' }}>
+                    <span style={{ width: 90 }}>主题</span>
+                    <Select
+                      value={themeMode}
+                      onChange={changeTheme}
+                      style={{ width: 160 }}
+                      options={[
+                        { value: 'light', label: '浅色' },
+                        { value: 'dark', label: '深色' },
+                      ]}
+                    />
+                  </Space>
+                  <div style={{ width: 420 }}>
+                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Typography.Text strong>UI 字号</Typography.Text>
+                      <Typography.Text type="secondary">{Math.round(fontScale * 100)}%</Typography.Text>
+                    </Space>
+                    <Slider
+                      min={0.8}
+                      max={1.4}
+                      step={0.05}
+                      value={fontScale}
+                      onChange={changeFontScale}
+                      marks={{ 0.8: '小', 1: '标准', 1.4: '大' }}
+                    />
+                  </div>
                 </Space>
               </Card>
             ),

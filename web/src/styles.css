@@ -48,3 +48,15 @@ body {
   border: 1px solid #e5e9f0;
   border-top-left-radius: 2px;
 }
+
+html[data-theme='dark'] body {
+  background: #0f141d;
+}
+html[data-theme='dark'] .message-assistant {
+  background: #1b2230;
+  border-color: #2a3244;
+  color: #e5e7eb;
+}
+html[data-theme='dark'] .message-user {
+  color: #fff;
+}
