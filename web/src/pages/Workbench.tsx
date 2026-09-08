@@ -43,6 +43,7 @@ export default function Workbench() {
   const [requests, setRequests] = useState<Rq[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [dashboard, setDashboard] = useState<any>(null);
+  const [formulaOptions, setFormulaOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm] = Form.useForm();
@@ -83,6 +84,10 @@ export default function Workbench() {
   useEffect(() => {
     api.get('/health').then((res) => setHealth(res.data?.knowledge_graph)).catch(() => setHealth(null));
     loadRequests();
+    api
+      .get('/formulas', { params: { keyword: '', limit: 200 } })
+      .then((res) => setFormulaOptions(res.data || []))
+      .catch(() => setFormulaOptions([]));
   }, []);
 
   useEffect(() => {
@@ -264,7 +269,19 @@ export default function Workbench() {
                 />
               </Form.Item>
               <Form.Item name="formula_code" label="配方编号">
-                <Input placeholder="如 HF-001" />
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="搜索并选择配方"
+                  onChange={(code) => {
+                    const hit = formulaOptions.find((r: any) => r.formula?.code === code);
+                    sampleForm.setFieldsValue({ formula_name: hit?.formula?.name || '' });
+                  }}
+                  options={formulaOptions.map((r: any) => ({
+                    label: `${r.formula?.code} | ${r.formula?.name}`,
+                    value: r.formula?.code,
+                  }))}
+                />
               </Form.Item>
               <Form.Item name="formula_name" label="配方名称">
                 <Input />
@@ -301,9 +318,15 @@ export default function Workbench() {
           <Form.Item name="customer" label="客户/项目" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -14 }}>
+            示例：某胶粘剂客户 / 内部新配方项目
+          </Typography.Paragraph>
           <Form.Item name="title" label="需求标题" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -14 }}>
+            一句话说明要解决什么，如：开发耐 120℃ 不黄变的环氧胶。
+          </Typography.Paragraph>
           <Form.Item name="requirement" label="需求描述">
             <Input.TextArea rows={3} />
           </Form.Item>

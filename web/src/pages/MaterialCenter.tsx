@@ -197,23 +197,26 @@ export default function MaterialCenter() {
       </Card>
 
       <Modal title="新增原材料" open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} destroyOnClose>
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          名称是系统匹配的关键字段，请与原料库/配方中名称保持一致；CAS 如 25068-38-6。
+        </Typography.Paragraph>
         <Form form={form} layout="vertical" onFinish={create}>
           <Form.Item name="name" label="材料名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Space wrap>
             <Form.Item name="cas_number" label="CAS 号">
-              <Input style={{ width: 220 }} />
+              <Input style={{ width: 220 }} placeholder="如 25068-38-6（可留空）" />
             </Form.Item>
             <Form.Item name="function" label="功能" initialValue="其他">
               <Select style={{ width: 160 }} options={FUNCTIONS.map((f) => ({ label: f, value: f }))} />
             </Form.Item>
           </Space>
           <Form.Item name="chemical_name" label="化学名称">
-            <Input />
+            <Input placeholder="如 双酚A型环氧树脂（可留空）" />
           </Form.Item>
           <Form.Item name="supplier" label="供应商">
-            <Input />
+            <Input placeholder="可留空" />
           </Form.Item>
         </Form>
       </Modal>
