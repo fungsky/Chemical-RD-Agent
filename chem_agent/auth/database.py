@@ -62,6 +62,20 @@ SYSTEM_PERMISSIONS = [
     ("knowledge:read", "knowledge", "read", "View knowledge base"),
     ("knowledge:write", "knowledge", "write", "Upload/delete KB documents"),
     ("data:reset", "data", "reset", "Reset system data"),
+    ("doe:read", "doe", "read", "Generate DOE designs and list methods"),
+    ("cost:read", "cost", "read", "Calculate formula BOM cost"),
+    ("compliance:read", "compliance", "read", "Run compliance screening"),
+    ("optimization:read", "optimization", "read", "Run formula optimization"),
+    ("process:read", "process", "read", "Analyze process SPC data"),
+    ("scaleup:read", "scaleup", "read", "Calculate scale-up recommendations"),
+    ("stability:read", "stability", "read", "Predict formula stability/shelf life"),
+    ("sustainability:read", "sustainability", "read", "Assess sustainability metrics"),
+    ("quality:read", "quality", "read", "View quality specs and COA reports"),
+    ("quality:write", "quality", "write", "Create/update quality templates and COA"),
+    ("experiment:read", "experiment", "read", "View experiment records"),
+    ("experiment:write", "experiment", "write", "Create/update experiment records"),
+    ("experiment:delete", "experiment", "delete", "Delete or reset experiment records"),
+    ("risk:read", "risk", "read", "Run formula safety risk analysis"),
 ]
 
 DEFAULT_ROLES = {
@@ -79,6 +93,12 @@ DEFAULT_ROLES = {
             "prediction:read", "prediction:train",
             "chat:access",
             "knowledge:read", "knowledge:write",
+            "doe:read", "cost:read", "compliance:read",
+            "optimization:read", "process:read", "scaleup:read",
+            "stability:read", "sustainability:read",
+            "quality:read", "quality:write",
+            "experiment:read", "experiment:write",
+            "risk:read",
         ],
     },
     "viewer": {
@@ -87,6 +107,10 @@ DEFAULT_ROLES = {
         "permissions": [
             "formula:read", "material:read", "chat:access",
             "knowledge:read",
+            "doe:read", "cost:read", "compliance:read",
+            "optimization:read", "process:read", "scaleup:read",
+            "stability:read", "sustainability:read",
+            "quality:read", "experiment:read", "risk:read",
         ],
     },
 }
@@ -485,7 +509,7 @@ def set_config(key, value, description=None, user_id=None):
     else:
         try:
             db.execute(
-                "INSERT INTO system_configs (key, alue, description, updated_at, updated_by) "
+                "INSERT INTO system_configs (key, value, description, updated_at, updated_by) "
                 "VALUES (%s, %s, %s, %s, %s)",
                 (key, value, description, now, user_id),
             )
@@ -493,7 +517,7 @@ def set_config(key, value, description=None, user_id=None):
         except Exception:
             db.rollback()
             db.execute(
-                "UPDATE system_configs SET alue = %s, updated_at = %s, updated_by = %s WHERE key = %s",
+                "UPDATE system_configs SET value = %s, updated_at = %s, updated_by = %s WHERE key = %s",
                 (value, now, user_id, key),
             )
     db.commit()

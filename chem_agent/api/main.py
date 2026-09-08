@@ -44,12 +44,13 @@ from chem_agent.api.cost_router import router as cost_router
 from chem_agent.api.compliance_router import router as compliance_router
 from chem_agent.api.experiment_router import router as experiment_router
 from chem_agent.api.optimization_router import router as optimization_router
-from chem_agent.api.materials_router import router as materials_router
 from chem_agent.api.scaleup_router import router as scaleup_router
 from chem_agent.api.stability_router import router as stability_router
 from chem_agent.api.sustainability_router import router as sustainability_router
 from chem_agent.api.quality_router import router as quality_router
 from chem_agent.api.process_router import router as process_router
+from chem_agent.api.risk_router import router as risk_router
+from chem_agent.api.wiki_router import router as wiki_router
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,54 @@ class _TTLCache:
 
 _cache = _TTLCache()
 
+
+def _risk_warnings(formula) -> list[str]:
+    """保存配方时附带安全风险提示（只提示，不阻断）。"""
+    try:
+        from chem_agent.risk.analyzer import RiskRequest, analyze_formula_risks
+        result = analyze_formula_risks(RiskRequest(formula=formula))
+        return [
+            f"{item.risk_type}: {item.description}（缓解建议: {item.mitigation}）"
+            for item in result.items
+            if item.level.value in ("moderate", "high", "critical")
+        ]
+    except Exception as e:
+        logger.debug("风险提示计算跳过: %s", e)
+        return []
+
+
+_SNAPSHOT_IGNORED_FIELDS = {"id", "created_at", "updated_at"}
+
+
+def _clean_snapshot(value):
+    """去掉运行时字段，用于判断配方内容是否真实变化。"""
+    if isinstance(value, dict):
+        return {
+            k: _clean_snapshot(v)
+            for k, v in value.items()
+            if k not in _SNAPSHOT_IGNORED_FIELDS
+        }
+    if isinstance(value, list):
+        return [_clean_snapshot(v) for v in value]
+    return value
+
+
+def _snapshot_semantic_equal(a, b) -> bool:
+    """比较两个配方快照（容忍字符串/对象混合），忽略运行时字段。"""
+    import json
+
+    def _as_dict(value):
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
+
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    return _clean_snapshot(_as_dict(a)) == _clean_snapshot(_as_dict(b))
+
+
 # 全局服务实例
 kg_service = KnowledgeGraphService()
 kg_local_mode = False  # True 表示 Neo4j 不可用，已切换到本地数据模式
@@ -81,6 +130,7 @@ predictor = FormulaPredictor()
 kb_service = None  # 知识库服务，在 lifespan 中初始化
 react_agent = None  # ReAct 智能体，在 lifespan 中初始化
 agent_memory = None  # Agent 记忆服务，在 lifespan 中初始化
+wiki_service = None  # LLM Wiki 服务，在 lifespan 中初始化
 
 
 @asynccontextmanager
@@ -126,6 +176,14 @@ async def lifespan(app: FastAPI):
         logger.info("知识库服务已初始化")
     except Exception as e:
         logger.warning("知识库服务初始化失败（知识库功能不可用）: %s", e)
+
+    global wiki_service
+    try:
+        from chem_agent.wiki import WikiService
+        wiki_service = WikiService(llm_service=llm_service)
+        logger.info("LLM Wiki 服务已初始化")
+    except Exception as e:
+        logger.warning("LLM Wiki 服务初始化失败: %s", e)
 
     # 初始化 ReAct 智能体
     global react_agent, agent_memory
@@ -203,12 +261,13 @@ app.include_router(cost_router)
 app.include_router(compliance_router)
 app.include_router(experiment_router)
 app.include_router(optimization_router)
-app.include_router(materials_router)
 app.include_router(scaleup_router)
 app.include_router(stability_router)
 app.include_router(sustainability_router)
 app.include_router(quality_router)
 app.include_router(process_router)
+app.include_router(risk_router)
+app.include_router(wiki_router)
 
 
 # ============ 请求/响应模型 ============
@@ -237,6 +296,7 @@ class RecommendationRequest(BaseModel):
 class RecommendationResponse(BaseModel):
     recommendation: str
     reference_formulas: list[FormulaSearchResult] = []
+    suggested_formula: Optional[dict] = None
 
 
 class SubstituteRequest(BaseModel):
@@ -615,9 +675,22 @@ async def chat(request: ChatRequest, _user: UserOut = Depends(require_permission
         except Exception:
             pass
 
-        # RAG: 从知识库检索相关文档片段
         rag_context = ""
-        if kb_service is not None:
+        # LLM Wiki 优先：命中结构化知识页时整页引用
+        if wiki_service is not None:
+            try:
+                wiki_results = await wiki_service.search(request.message, top_k=settings.rag_top_k)
+                if wiki_results:
+                    lines = ["\n=== 知识Wiki ==="]
+                    for i, r in enumerate(wiki_results, 1):
+                        lines.append(f"\n[Wiki{i}: {r.title}]")
+                        lines.append(r.content[:1500])
+                    rag_context = "\n".join(lines)
+            except Exception as e:
+                logger.debug("Wiki 检索跳过: %s", e)
+
+        # 回退：无 Wiki 命中时检索原文分块
+        if kb_service is not None and not rag_context:
             try:
                 rag_results = await kb_service.search(request.message, top_k=settings.rag_top_k)
                 if rag_results:
@@ -649,12 +722,85 @@ async def chat(request: ChatRequest, _user: UserOut = Depends(require_permission
 
 
 @app.post("/api/formulas", response_model=dict)
-async def create_formula(formula: Formula, _user: UserOut = Depends(require_permission("formula:write"))):
-    """创建/更新配方"""
+async def create_formula(
+    formula: Formula,
+    domains: Optional[str] = Query(None, description="可选：合规检查领域，逗号分隔（如 construction,toys）"),
+    current_user: UserOut = Depends(require_permission("formula:write")),
+):
+    """创建/更新配方；自动保存版本快照并返回安全/合规提示（不阻断保存）。"""
     try:
+        existing = kg_service.get_formula(formula.code) if formula.code else None
         formula_id = kg_service.upsert_formula(formula)
         _cache.clear()
-        return {"id": formula_id, "message": f"配方 '{formula.name}' 已保存"}
+        warnings = _risk_warnings(formula)
+        compliance_warnings: list[str] = []
+        if domains:
+            from chem_agent.compliance.rules import (
+                ComplianceRequest,
+                RegulationDomain,
+                check_compliance,
+            )
+            try:
+                domain_list = [RegulationDomain(d.strip()) for d in domains.split(",") if d.strip()]
+            except ValueError as exc:
+                raise ChemAgentError(
+                    error_code=ErrorCode.INPUT_INVALID,
+                    internal_detail=str(exc),
+                    status_code=400,
+                )
+            comp = check_compliance(ComplianceRequest(formula=formula, domains=domain_list))
+            compliance_warnings = [
+                f"{v.rule_name}: {v.material_name} 实际 {v.actual_value}，限值 {v.limit_value}"
+                for v in comp.violations
+                if v.severity in ("error", "critical")
+            ]
+
+        version_info = {"version_saved": False}
+        if formula.code:
+            try:
+                from chem_agent.auth import database as auth_db
+                current_snapshot = formula.model_dump(mode="json")
+                latest = auth_db.get_latest_formula_version(formula.code)
+                if existing is not None and _snapshot_semantic_equal(
+                    (latest or {}).get("snapshot_data"), current_snapshot
+                ):
+                    version_info = {
+                        "version_saved": False,
+                        "version_note": "配方内容未变化，未生成新版本",
+                    }
+                else:
+                    version_number = auth_db.save_formula_version(
+                        formula_code=formula.code,
+                        snapshot_data=current_snapshot,
+                        change_summary="创建配方" if existing is None else "更新配方",
+                        changed_by=current_user.username,
+                    )
+                    version_info = {"version_saved": True, "version_number": version_number}
+            except Exception as e:
+                logger.warning("配方版本快照保存失败: %s", e)
+
+        try:
+            from chem_agent.auth import database as auth_db
+            auth_db.log_audit(
+                action="create_formula" if existing is None else "update_formula",
+                user_id=current_user.id,
+                username=current_user.username,
+                resource_type="formula",
+                resource_id=formula.code or formula.name,
+                details={"name": formula.name, "version": formula.version},
+            )
+        except Exception as e:
+            logger.warning("配方审计日志写入失败: %s", e)
+
+        return {
+            "id": formula_id,
+            "message": f"配方 '{formula.name}' 已保存",
+            **version_info,
+            "warnings": warnings,
+            "compliance_warnings": compliance_warnings,
+        }
+    except ChemAgentError:
+        raise
     except Exception as e:
         logger.error("保存配方失败: %s", e)
         raise ChemAgentError(error_code=ErrorCode.DB_QUERY_FAILED, internal_detail=str(e))
@@ -885,8 +1031,24 @@ async def recommend_formula(request: RecommendationRequest, _user: UserOut = Dep
             target_performance=request.target_performance,
             reference_results=references,
         )
+        suggested_formula = None
+        try:
+            raw = await llm_service.extract_recommendation_formula(
+                requirement=request.requirement,
+                category=request.category,
+                target_performance=request.target_performance,
+                recommendation=recommendation,
+                reference_results=references,
+            )
+            if raw:
+                validated = Formula(**raw)
+                suggested_formula = validated.model_dump(mode="json")
+        except Exception as e:
+            logger.warning("推荐配方结构校验失败: %s", e)
         return RecommendationResponse(
-            recommendation=recommendation, reference_formulas=references
+            recommendation=recommendation,
+            reference_formulas=references,
+            suggested_formula=suggested_formula,
         )
     except Exception as e:
         logger.error("配方推荐失败: %s", e)
@@ -974,13 +1136,33 @@ async def create_material(material: RawMaterial, _user: UserOut = Depends(requir
 
 @app.get("/api/materials", response_model=list[RawMaterial])
 async def search_materials(
-    keyword: str = Query(..., description="搜索关键词"),
+    keyword: str = Query("", description="搜索关键词"),
     function: Optional[str] = Query(None, description="功能分类"),
     limit: int = Query(20, ge=1, le=100),
     _user: UserOut = Depends(require_permission("material:read")),
 ):
-    """搜索原材料"""
+    """搜索原材料（keyword 为空时返回全部）"""
     return kg_service.search_materials(keyword, function_filter=function, limit=limit)
+
+
+@app.get("/api/materials/categories")
+async def material_function_stats(
+    _user: UserOut = Depends(require_permission("material:read")),
+):
+    """原材料功能分类统计（知识图谱主数据源）"""
+    from collections import Counter
+
+    materials = kg_service.search_materials("", limit=1000)
+    counts = Counter(
+        m.function.value if hasattr(m.function, "value") else str(m.function)
+        for m in materials
+    )
+    return {
+        "categories": [
+            {"name": name, "count": count}
+            for name, count in counts.most_common()
+        ]
+    }
 
 
 @app.get("/api/materials/{name}/detail")
@@ -1061,7 +1243,19 @@ async def train_predictor(request: TrainRequest, _user: UserOut = Depends(requir
                 )
 
         if not training_data:
-            raise HTTPException(status_code=400, detail="知识图谱中没有足够的训练数据")
+            training_data = []
+
+        # 合并实验记录导出的训练数据（DOE→实验→模型 闭环）
+        try:
+            from chem_agent.experiments.manager import get_experiment_manager
+            experiment_export = get_experiment_manager().export_training_data()
+            if experiment_export.training_data:
+                training_data.extend(experiment_export.training_data)
+        except Exception as e:
+            logger.warning("实验训练数据合并跳过: %s", e)
+
+        if not training_data:
+            raise HTTPException(status_code=400, detail="知识图谱和实验记录中都没有足够的训练数据")
 
         results = predictor.train(training_data, request.target_properties)
         predictor.save()

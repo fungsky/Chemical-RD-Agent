@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS category_configs (
 
 CREATE TABLE IF NOT EXISTS system_configs (
     key VARCHAR(256) PRIMARY KEY,
-    alue TEXT,
+    value TEXT,
     description TEXT,
     updated_at TIMESTAMP NULL,
     updated_by INTEGER
@@ -155,6 +155,7 @@ class MySQLAuthDB(AuthDBBackendBase):
     def execute(self, sql: str, params: tuple = None):
         conn = self.connect()
         cursor = conn.cursor()
+        sql = self.format_sql(sql)
         if params:
             cursor.execute(sql, params)
         else:
@@ -164,6 +165,7 @@ class MySQLAuthDB(AuthDBBackendBase):
     def execute_many(self, sql: str, params_list: list[tuple]):
         conn = self.connect()
         cursor = conn.cursor()
+        sql = self.format_sql(sql)
         cursor.executemany(sql, params_list)
         return cursor
 

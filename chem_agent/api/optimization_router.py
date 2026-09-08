@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from chem_agent.optimization.models import (
     OptimizationMethod,
@@ -10,6 +10,8 @@ from chem_agent.optimization.models import (
     OptimizationResult,
 )
 from chem_agent.optimization.engine import OptimizationEngine
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ _engine = OptimizationEngine()
 
 
 @router.post("/run", response_model=OptimizationResult, summary="执行多目标配方优化")
-async def run_optimization(req: OptimizationRequest):
+async def run_optimization(req: OptimizationRequest, _user: UserOut = Depends(require_permission("optimization:read"))):
     """在因子空间中搜索最优配方。
 
     支持三种模式：
@@ -38,7 +40,7 @@ async def run_optimization(req: OptimizationRequest):
 
 
 @router.get("/methods", summary="获取支持的优化方法")
-async def list_methods():
+async def list_methods(_user: UserOut = Depends(require_permission("optimization:read"))):
     """返回优化方法说明。"""
     return {
         "methods": [
@@ -62,7 +64,7 @@ async def list_methods():
 
 
 @router.get("/example", summary="获取优化示例请求")
-async def get_example():
+async def get_example(_user: UserOut = Depends(require_permission("optimization:read"))):
     """返回一个典型的优化请求示例，帮助理解 API 用法。"""
     return {
         "example": {
@@ -87,4 +89,3 @@ async def get_example():
         "description": "水性防腐涂料多目标优化示例 — 最大化盐雾和附着力，最小化成本",
     }
 
-print("optimization_router done")

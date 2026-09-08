@@ -4,7 +4,7 @@ import logging
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from chem_agent.compliance.rules import (
     RegulationDomain,
@@ -12,6 +12,8 @@ from chem_agent.compliance.rules import (
     ComplianceResult,
     check_compliance,
 )
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ _STANDARDS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "stan
 
 
 @router.post("/check", response_model=ComplianceResult, summary="配方合规检查")
-async def check_compliance_endpoint(req: ComplianceRequest):
+async def check_compliance_endpoint(req: ComplianceRequest, _user: UserOut = Depends(require_permission("compliance:read"))):
     """对配方进行指定法规领域的合规检查。
 
     支持的法规领域:
@@ -43,7 +45,7 @@ async def check_compliance_endpoint(req: ComplianceRequest):
 
 
 @router.get("/domains", summary="获取支持的法规领域")
-async def list_domains():
+async def list_domains(_user: UserOut = Depends(require_permission("compliance:read"))):
     """返回所有支持的法规领域及说明。"""
     descriptions = {
         RegulationDomain.FOOD_CONTACT: "食品接触材料 — GB 4806 系列 / GB 9685, EU 10/2011",
@@ -64,7 +66,7 @@ async def list_domains():
 
 
 @router.get("/standards", summary="获取国标/行标标准登记表")
-async def list_standards():
+async def list_standards(_user: UserOut = Depends(require_permission("compliance:read"))):
     """返回内置的中国国家标准(GB/GB-T)与行业标准(行标)登记索引。"""
     try:
         with open(_STANDARDS_FILE, encoding="utf-8") as f:
@@ -73,4 +75,3 @@ async def list_standards():
         logger.error("标准登记表读取失败: %s", e)
         raise HTTPException(status_code=500, detail=f"标准登记表读取失败: {e}")
 
-print("compliance_router done")

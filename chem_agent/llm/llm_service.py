@@ -17,6 +17,104 @@ from chem_agent.models import Formula, FormulaSearchResult
 
 logger = logging.getLogger(__name__)
 
+
+def _normalize_recommended_formula(data: dict) -> Optional[dict]:
+    """把 LLM 输出的松散配方 JSON 规整为 Formula 可接受的字段。"""
+    import re
+
+    function_fix = {
+        "助剂": "其他",
+        "表面活性剂": "其他",
+        "单体": "其他",
+        "树脂": "基础树脂",
+        "基料": "基础树脂",
+        "成膜物": "基础树脂",
+        "树脂基料": "基础树脂",
+        "颜料和填料": "颜料",
+        "颜填料": "颜料",
+        "溶剂/水": "溶剂",
+        "功能助剂": "其他",
+        "成膜助剂": "其他",
+        "润湿分散剂": "分散剂",
+        "交联剂": "固化剂",
+        "": "其他",
+    }
+    valid_functions = {
+        "基础树脂", "溶剂", "填料", "颜料", "固化剂", "催化剂",
+        "分散剂", "流平剂", "消泡剂", "增稠剂", "增塑剂",
+        "抗氧化剂", "紫外稳定剂", "阻燃剂", "偶联剂", "润湿剂", "其他",
+    }
+    raw_items = data.get("items") if isinstance(data.get("items"), list) else []
+    items = []
+    for it in raw_items:
+        if not isinstance(it, dict):
+            continue
+        material = it.get("material")
+        if not isinstance(material, dict):
+            continue
+        try:
+            weight = float(it.get("weight_percent"))
+        except (TypeError, ValueError):
+            continue
+        name = str(material.get("name", "")).strip()
+        if not name:
+            continue
+        func_raw = str(material.get("function", "其他")).strip()
+        func = function_fix.get(func_raw, func_raw)
+        if func not in valid_functions:
+            func = "其他"
+        mat = {"name": name, "function": func}
+        if material.get("cas_number"):
+            mat["cas_number"] = material.get("cas_number")
+        items.append({"material": mat, "weight_percent": round(weight, 2)})
+
+    if not items:
+        return None
+
+    total = sum(i["weight_percent"] for i in items)
+    if not 95.0 <= total <= 105.0:
+        factor = 100.0 / total if total > 0 else 1.0
+        for i in items:
+            i["weight_percent"] = round(i["weight_percent"] * factor, 2)
+
+    process = {}
+    if isinstance(data.get("process"), dict):
+        for key in ("temperature", "mixing_speed", "mixing_time", "pressure", "curing_temperature", "curing_time"):
+            val = data["process"].get(key)
+            try:
+                if val is not None:
+                    process[key] = float(val)
+            except (TypeError, ValueError):
+                process[key] = None
+
+    performance = []
+    raw_perf = data.get("performance") if isinstance(data.get("performance"), list) else []
+    for p in raw_perf:
+        if not isinstance(p, dict):
+            continue
+        test_name = str(p.get("test_name") or p.get("metric") or "").strip()
+        val = p.get("value")
+        if isinstance(val, str):
+            m = re.search(r"[-+]?\d*\.?\d+", val)
+            val = float(m.group()) if m else None
+        try:
+            value = float(val)
+        except (TypeError, ValueError):
+            continue
+        if test_name:
+            performance.append({"test_name": test_name, "value": value, "unit": str(p.get("unit") or "")})
+
+    return {
+        "name": str(data.get("name") or "AI推荐配方"),
+        "code": None,
+        "category": data.get("category") or "其他",
+        "description": data.get("description") or "",
+        "items": items,
+        "process": process or None,
+        "performance": performance,
+        "tags": [],
+    }
+
 # ============ Prompt 模板 ============
 
 SYSTEM_PROMPT = """你是一个专业的化工研发智能助手（ChemAgent），专注于帮助研发人员进行配方开发工作。
@@ -338,6 +436,61 @@ class LLMService:
             timeout=settings.llm_timeout_seconds,
         )
         return response
+
+    async def extract_recommendation_formula(
+        self,
+        requirement: str,
+        category: str,
+        target_performance: dict,
+        recommendation: str,
+        reference_results: list[FormulaSearchResult],
+    ) -> Optional[dict]:
+        """把 AI 推荐文本转成结构化配方 JSON，供一键入库。"""
+        ref_texts = []
+        for i, r in enumerate(reference_results[:3], 1):
+            f = r.formula
+            items = ", ".join(
+                f"{item.material.name}({item.weight_percent}%)"
+                for item in f.items[:8]
+            )
+            ref_texts.append(f"案例{i}: {f.name}\n    组分: {items}")
+        ref_text = "\n".join(ref_texts) or "无"
+        target_text = "\n".join(f"  - {k}: {v}" for k, v in target_performance.items()) or "未指定"
+        prompt = (
+            "你是化工配方结构化提取器。根据下面的需求、性能目标和 AI 推荐结果，"
+            "输出一个可保存到配方库的配方 JSON。\n"
+            "必须输出合法 JSON（不要 Markdown 代码块），结构：\n"
+            '{"name":"配方名称","code":null,"category":"涂料或胶粘剂等已有类别",'
+            '"description":"一句话说明","items":[{"material":{"name":"原料名",'
+            '"function":"基础树脂或溶剂等已有功能"},"weight_percent":数值}],'
+            '"process":{"temperature":null,"mixing_speed":null,"mixing_time":null},'
+            '"performance":[]}\n'
+            "要求：组分百分比总和在 95-105 之间；只使用 AI 推荐或参考案例中出现的材料；"
+            "不要编造材料；不要输出其他文字。\n\n"
+            f"需求：{requirement}\n"
+            f"类别：{category}\n"
+            f"目标性能：{target_text}\n"
+            f"参考案例：\n{ref_text}\n\n"
+            f"AI 推荐文本：\n{recommendation}"
+        )
+        try:
+            response = await asyncio.wait_for(
+                (self.llm | StrOutputParser()).ainvoke(prompt),
+                timeout=settings.llm_timeout_seconds,
+            )
+            text = (response or "").strip()
+            if text.startswith("```"):
+                text = text.strip("`")
+                if text.startswith("json"):
+                    text = text[4:].strip()
+            import json
+            data = json.loads(text)
+            if not isinstance(data, dict):
+                return None
+            return _normalize_recommended_formula(data)
+        except Exception as e:
+            logger.warning("推荐配方结构化提取失败: %s", e)
+            return None
 
     async def suggest_substitute(
         self,

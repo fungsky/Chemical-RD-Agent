@@ -16,7 +16,7 @@ class ChemAgentLauncher:
     def check_deps(self):
         """Check if required packages are installed."""
         try:
-            import fastapi, uvicorn, streamlit
+            import fastapi, uvicorn
             return True
         except ImportError:
             return False
@@ -49,14 +49,9 @@ class ChemAgentLauncher:
         return False
 
     def start_ui(self):
-        """Start Streamlit UI."""
-        print("Starting UI...")
-        self.ui_proc = subprocess.Popen(
-            [sys.executable, "-m", "streamlit", "run", "chem_agent/ui/app.py",
-             "--server.port", str(UI_PORT), "--server.headless", "true"],
-            cwd=str(PROJECT_DIR),
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
+        """旧 Streamlit UI 已停用，提示用户使用 web/ React 前端。"""
+        print("Streamlit UI 已停用，请使用 web/ React 前端 (localhost:5173)")
+        return False
 
     def open_browser(self):
         time.sleep(3)
@@ -93,7 +88,7 @@ class ChemAgentLauncher:
         threading.Thread(target=self.open_browser, daemon=True).start()
 
         print(f"\n  API:  http://localhost:{API_PORT}/docs")
-        print(f"  UI:   http://localhost:{UI_PORT}")
+        print(f"  新版 Web UI: 在 web/ 目录运行 npm run dev (localhost:5173)")
         print(f"\n  Press Ctrl+C to stop\n")
 
         try:

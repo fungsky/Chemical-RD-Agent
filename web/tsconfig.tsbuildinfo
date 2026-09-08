@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/layouts/applayout.tsx","./src/pages/assistant.tsx","./src/pages/formulacenter.tsx","./src/pages/labcenter.tsx","./src/pages/login.tsx","./src/pages/materialcenter.tsx","./src/pages/systemsettings.tsx","./src/pages/wikicenter.tsx","./src/pages/workbench.tsx"],"version":"5.7.3"}

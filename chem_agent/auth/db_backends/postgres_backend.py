@@ -153,6 +153,7 @@ class PostgresAuthDB(AuthDBBackendBase):
     def execute(self, sql: str, params: tuple = None):
         conn = self.connect()
         cursor = conn.cursor()
+        sql = self.format_sql(sql)
         if params:
             cursor.execute(sql, params)
         else:
@@ -162,6 +163,7 @@ class PostgresAuthDB(AuthDBBackendBase):
     def execute_many(self, sql: str, params_list: list[tuple]):
         conn = self.connect()
         cursor = conn.cursor()
+        sql = self.format_sql(sql)
         cursor.executemany(sql, params_list)
         return cursor
 

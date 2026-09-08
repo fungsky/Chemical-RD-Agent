@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from chem_agent.experiments import (
     ExperimentResult,
@@ -13,6 +13,8 @@ from chem_agent.experiments import (
     ExperimentManager,
 )
 from chem_agent.experiments.manager import get_experiment_manager
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ def _manager() -> ExperimentManager:
 
 
 @router.post("/results", response_model=ExperimentResult, summary="录入单条实验结果")
-async def add_result(result: ExperimentResult):
+async def add_result(result: ExperimentResult, _user: UserOut = Depends(require_permission("experiment:write"))):
     """录入一组实验的结果（可关联 DOE 运行序号）。"""
     try:
         return _manager().add_result(result)
@@ -36,7 +38,7 @@ async def add_result(result: ExperimentResult):
 
 
 @router.post("/results/batch", summary="批量录入实验结果")
-async def add_batch(batch: ExperimentBatch):
+async def add_batch(batch: ExperimentBatch, _user: UserOut = Depends(require_permission("experiment:write"))):
     """批量录入实验结果，如 DOE 全部运行的实测数据。"""
     try:
         results = _manager().add_batch(batch)
@@ -52,7 +54,7 @@ async def add_batch(batch: ExperimentBatch):
 
 
 @router.get("/results/{experiment_id}", response_model=ExperimentResult, summary="查询单条实验结果")
-async def get_result(experiment_id: str):
+async def get_result(experiment_id: str, _user: UserOut = Depends(require_permission("experiment:read"))):
     result = _manager().get_result(experiment_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"实验 {experiment_id} 不存在")
@@ -60,7 +62,7 @@ async def get_result(experiment_id: str):
 
 
 @router.patch("/results/{experiment_id}", response_model=ExperimentResult, summary="更新实验结果")
-async def update_result(experiment_id: str, updates: dict):
+async def update_result(experiment_id: str, updates: dict, _user: UserOut = Depends(require_permission("experiment:write"))):
     try:
         return _manager().update_result(experiment_id, updates)
     except KeyError:
@@ -68,7 +70,7 @@ async def update_result(experiment_id: str, updates: dict):
 
 
 @router.delete("/results/{experiment_id}", summary="删除实验结果")
-async def delete_result(experiment_id: str):
+async def delete_result(experiment_id: str, _user: UserOut = Depends(require_permission("experiment:delete"))):
     ok = _manager().delete_result(experiment_id)
     if not ok:
         raise HTTPException(status_code=404, detail=f"实验 {experiment_id} 不存在")
@@ -76,7 +78,7 @@ async def delete_result(experiment_id: str):
 
 
 @router.patch("/results/{experiment_id}/outlier", summary="标记/取消异常值")
-async def mark_outlier(experiment_id: str, is_outlier: bool = True, reason: str = ""):
+async def mark_outlier(experiment_id: str, is_outlier: bool = True, reason: str = "", _user: UserOut = Depends(require_permission("experiment:write"))):
     try:
         result = _manager().mark_outlier(experiment_id, reason if is_outlier else "")
         return {"success": True, "is_outlier": result.is_outlier}
@@ -85,7 +87,7 @@ async def mark_outlier(experiment_id: str, is_outlier: bool = True, reason: str 
 
 
 @router.post("/query", summary="条件查询实验记录")
-async def query_experiments(q: ExperimentQuery):
+async def query_experiments(q: ExperimentQuery, _user: UserOut = Depends(require_permission("experiment:read"))):
     results = _manager().query(q)
     return {
         "total": len(results),
@@ -95,21 +97,21 @@ async def query_experiments(q: ExperimentQuery):
 
 
 @router.get("/stats", summary="实验数据概览")
-async def experiment_stats():
+async def experiment_stats(_user: UserOut = Depends(require_permission("experiment:read"))):
     return _manager().get_stats()
 
 
 @router.get("/export/training-data", response_model=TrainingDataExport, summary="导出训练数据")
 async def export_training_data(
     exclude_outliers: bool = Query(True, description="是否排除异常值"),
+    _user: UserOut = Depends(require_permission("experiment:read")),
 ):
     """将实验数据导出为预测模型训练格式，可直接用于 POST /api/predict/train。"""
     return _manager().export_training_data(exclude_outliers=exclude_outliers)
 
 
 @router.post("/reset", summary="清空所有实验数据")
-async def reset_experiments():
+async def reset_experiments(_user: UserOut = Depends(require_permission("experiment:delete"))):
     n = _manager().clear_all()
     return {"success": True, "deleted": n}
 
-print("experiment_router done")

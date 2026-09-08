@@ -29,11 +29,9 @@ dependencies = [
     "numpy>=1.24.0",
 
     # 前端
-    "streamlit>=1.29.0",
     "requests>=2.31.0",
     "pandas>=2.1.0",
     "openpyxl>=3.1.0",
-    "plotly>=5.18.0",
 
     # 认证
     "python-jose[cryptography]>=3.3.0",
@@ -55,6 +53,17 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "httpx>=0.25.0",
     "ruff>=0.1.0",
+]
+db-postgres = [
+    "psycopg2-binary>=2.9.9",
+]
+db-mysql = [
+    "pymysql>=1.1.0",
+]
+desktop = [
+    "PyQt6>=6.6",
+    "Pillow>=10.0",
+    "pyinstaller>=6.0",
 ]
 
 [build-system]

@@ -29,6 +29,6 @@ def setup_logging(log_level=None, log_file=None, log_dir="./logs", max_bytes=10*
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
-    for lib in ("neo4j", "urllib3", "httpx", "chromadb", "streamlit"):
+    for lib in ("neo4j", "urllib3", "httpx", "chromadb"):
         logging.getLogger(lib).setLevel(logging.WARNING)
     logging.getLogger("chem_agent").info("Logging initialized level=%s", log_level)

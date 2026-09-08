@@ -62,8 +62,8 @@ start_local() {
     source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate
     pip install -q -r requirements.txt
     $py -m uvicorn chem_agent.api.main:app --reload --host 0.0.0.0 --port 8000 &
-    $py -m streamlit run chem_agent/ui/app.py --server.port 8501 &
-    echo "UI: http://localhost:8501 | API: http://localhost:8000/docs"
+    echo "旧 Streamlit UI 已停用；新版前端请在 web/ 目录执行 npm run dev"
+    echo "API: http://localhost:8000/docs"
     wait
 }
 

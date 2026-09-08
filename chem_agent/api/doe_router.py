@@ -2,10 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from chem_agent.doe.models import DesignRequest, DesignResult
 from chem_agent.doe.designs import generate_design
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,7 @@ router = APIRouter(prefix="/api/doe", tags=["DOE"])
 
 
 @router.post("/generate", response_model=DesignResult, summary="生成实验设计方案")
-async def generate_doe_design(req: DesignRequest):
+async def generate_doe_design(req: DesignRequest, _user: UserOut = Depends(require_permission("doe:read"))):
     """根据指定方法和因子生成实验设计方案。
 
     支持5种设计方法：
@@ -34,7 +36,7 @@ async def generate_doe_design(req: DesignRequest):
 
 
 @router.get("/methods", summary="获取支持的实验设计方法")
-async def list_doe_methods():
+async def list_doe_methods(_user: UserOut = Depends(require_permission("doe:read"))):
     """返回所有支持的DOE设计方法及说明。"""
     from chem_agent.doe.models import DesignMethod
     descriptions = {
@@ -51,4 +53,3 @@ async def list_doe_methods():
         ],
     }
 
-print("doe_router done")

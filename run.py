@@ -17,16 +17,6 @@ def start_api():
     ])
 
 
-def start_ui():
-    """启动 Streamlit 前端"""
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    subprocess.run([
-        sys.executable, "-m", "streamlit", "run",
-        "chem_agent/ui/app.py",
-        "--server.port", "8501",
-    ])
-
-
 def init_data():
     """初始化示例数据"""
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -37,15 +27,12 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("用法:")
         print("  python run.py api    - 启动后端 API 服务")
-        print("  python run.py ui     - 启动前端 UI")
         print("  python run.py init   - 初始化示例数据")
         sys.exit(1)
 
     cmd = sys.argv[1]
     if cmd == "api":
         start_api()
-    elif cmd == "ui":
-        start_ui()
     elif cmd == "init":
         init_data()
     else:

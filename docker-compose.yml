@@ -123,20 +123,6 @@ services:
       start_period: 15s
     restart: unless-stopped
 
-  # ============ Streamlit 前端 ============
-  ui:
-    build: .
-    container_name: chemagent-ui
-    command: python -m streamlit run chem_agent/ui/app.py --server.port 8501 --server.address 0.0.0.0
-    ports:
-      - "8501:8501"
-    environment:
-      - API_BASE=http://api:8000
-    depends_on:
-      api:
-        condition: service_healthy
-    restart: unless-stopped
-
   # ============ 数据初始化（一次性任务）============
   init-data:
     build: .

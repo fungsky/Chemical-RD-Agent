@@ -213,4 +213,3 @@ def check_compliance(req: ComplianceRequest) -> ComplianceResult:
         summary=f"检查 {len(req.domains)} 个领域，{len(violations)} 条记录（不合规:{error_count}, 提醒:{warn_count}）",
     )
 
-print("compliance done")

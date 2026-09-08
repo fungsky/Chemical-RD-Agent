@@ -97,4 +97,3 @@ def calculate_formula_cost(req: CostRequest) -> CostResult:
         missing_prices=missing,
     )
 
-print("cost done")

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/admin/users", tags=["用户管理"])
 @router.get("", response_model=list[UserOut])
 async def list_users(_user: UserOut = Depends(require_permission("user:read"))):
     """获取所有用户列表。"""
-    users = db.list_users()
+    users, _total = db.list_users(limit=1000)
     return [_build_user_out(u) for u in users]
 
 

@@ -30,6 +30,43 @@ class MaterialManager:
                     self._records[k] = MaterialRecord(**v)
             except Exception as e:
                 logger.warning("load materials fail: %s", e)
+        if not self._records:
+            self._seed_sample()
+
+    @staticmethod
+    def _function_category(function: str):
+        mapping = {
+            "基础树脂": "树脂", "溶剂": "溶剂", "填料": "填料",
+            "颜料": "颜料", "分散剂": "助剂", "流平剂": "助剂",
+            "消泡剂": "助剂", "增稠剂": "助剂", "增塑剂": "助剂",
+            "抗氧化剂": "助剂", "紫外稳定剂": "助剂", "阻燃剂": "助剂",
+            "偶联剂": "助剂", "固化剂": "固化剂", "催化剂": "催化剂",
+        }
+        return mapping.get(function, "其他")
+
+    def _seed_sample(self):
+        """materials.json 缺失或为空时，装载项目样例主数据（仅内存）。"""
+        try:
+            from data.materials_data import MATERIALS
+        except ImportError:
+            return
+        for m in MATERIALS:
+            name = m.get("name")
+            if not name:
+                continue
+            supplier = m.get("supplier")
+            suppliers = [SupplierInfo(name=supplier)] if supplier else []
+            function = m.get("function", "其他")
+            rec = MaterialRecord(
+                name=name,
+                cas_number=m.get("cas_number"),
+                chemical_name=m.get("chemical_name"),
+                category=self._function_category(function),
+                function=function,
+                suppliers=suppliers,
+                tags=[function] if function else [],
+            )
+            self._records[self._key(rec.name)] = rec
 
     def _save(self):
         raw = {k: v.model_dump(mode="json") for k, v in self._records.items()}

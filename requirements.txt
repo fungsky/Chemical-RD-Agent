@@ -27,11 +27,9 @@ scikit-learn>=1.3.0
 numpy>=1.24.0
 
 # Frontend
-streamlit>=1.29.0
 requests>=2.31.0
 pandas>=2.1.0
 openpyxl>=3.1.0
-plotly>=5.18.0
 
 # Authentication
 python-jose[cryptography]>=3.3.0
@@ -47,10 +45,11 @@ lxml>=4.9.0
 langchain-text-splitters>=0.0.1
 
 # Database Backends (optional: install per backend)
-# PostgreSQL: pip install psycopg2-binary>=2.9.9
-# MySQL: pip install pymysql>=1.1.0
+# PostgreSQL: pip install -e ".[db-postgres]"
+# MySQL: pip install -e ".[db-mysql]"
 
 # Desktop App (Windows native desktop)
+# pip install -e ".[desktop]"
 PyQt6>=6.6
 
 Pillow>=10.0

@@ -4,10 +4,12 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from chem_agent.auth import database as db
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +34,14 @@ class VersionResponse(BaseModel):
 
 
 @router.post("/save", summary="保存配方版本")
-async def save_version(req: SaveVersionRequest):
+async def save_version(req: SaveVersionRequest, current_user: UserOut = Depends(require_permission("formula:write"))):
     """保存配方快照，自动递增版本号。"""
     try:
         version_number = db.save_formula_version(
             formula_code=req.formula_code,
             snapshot_data=req.snapshot_data,
             change_summary=req.change_summary,
-            changed_by=req.changed_by,
+            changed_by=current_user.username,
         )
         return {
             "success": True,
@@ -52,7 +54,7 @@ async def save_version(req: SaveVersionRequest):
 
 
 @router.get("/{formula_code}", summary="获取配方版本历史")
-async def list_versions(formula_code: str):
+async def list_versions(formula_code: str, _user: UserOut = Depends(require_permission("formula:read"))):
     """获取指定配方的所有版本历史。"""
     try:
         versions = db.get_formula_versions(formula_code)
@@ -67,7 +69,7 @@ async def list_versions(formula_code: str):
 
 
 @router.get("/{formula_code}/{version_number}", summary="获取配方指定版本")
-async def get_version(formula_code: str, version_number: int):
+async def get_version(formula_code: str, version_number: int, _user: UserOut = Depends(require_permission("formula:read"))):
     """获取配方某个版本的快照。"""
     try:
         version = db.get_formula_version(formula_code, version_number)
@@ -82,7 +84,7 @@ async def get_version(formula_code: str, version_number: int):
 
 
 @router.get("/{formula_code}/latest", summary="获取配方最新版本")
-async def get_latest_version(formula_code: str):
+async def get_latest_version(formula_code: str, _user: UserOut = Depends(require_permission("formula:read"))):
     """获取配方最新版本的快照。"""
     try:
         version = db.get_latest_formula_version(formula_code)
@@ -101,6 +103,7 @@ async def diff_versions(
     formula_code: str,
     v1: int = Query(..., description="版本号 A"),
     v2: int = Query(..., description="版本号 B"),
+    _user: UserOut = Depends(require_permission("formula:read")),
 ):
     """对比两个版本的配方差异。"""
     try:

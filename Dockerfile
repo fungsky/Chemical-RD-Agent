@@ -32,7 +32,6 @@ RUN pip install --no-cache-dir \
     "langchain-core>=0.1.0" \
     "scikit-learn>=1.3.0" \
     "numpy>=1.24.0" \
-    "streamlit>=1.29.0" \
     "requests>=2.31.0" \
     "pandas>=2.1.0" \
     "openpyxl>=3.1.0" \

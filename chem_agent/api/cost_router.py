@@ -2,9 +2,11 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from chem_agent.cost.cost_calculator import CostRequest, CostResult, calculate_formula_cost
+from chem_agent.auth.dependencies import require_permission
+from chem_agent.auth.models import UserOut
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/api/cost", tags=["Cost"])
 
 
 @router.post("/calculate", response_model=CostResult, summary="计算配方BOM成本")
-async def calculate_cost(req: CostRequest):
+async def calculate_cost(req: CostRequest, _user: UserOut = Depends(require_permission("cost:read"))):
     """根据配方组分和物料单价计算总成本和单位成本。
 
     输出包含:
@@ -27,4 +29,3 @@ async def calculate_cost(req: CostRequest):
         logger.error("Cost calculation failed: %s", e)
         raise HTTPException(status_code=500, detail=f"成本核算失败: {e}")
 
-print("cost_router done")

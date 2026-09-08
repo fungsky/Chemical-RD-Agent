@@ -41,3 +41,36 @@ class TestAuthBypass:
         resp = client.get("/api/admin/llm/config")
         assert resp.status_code == 200
         assert "provider" in resp.json()
+
+
+class TestFormulaSaveComplianceDomain:
+    def test_invalid_domain_returns_400(self, client, monkeypatch):
+        from chem_agent.config import settings
+        from chem_agent.api import main
+
+        monkeypatch.setattr(settings, "auth_bypass", True)
+
+        class _FakeKG:
+            def get_formula(self, code):
+                return None
+
+            def upsert_formula(self, formula):
+                return formula.code or formula.name
+
+        monkeypatch.setattr(main, "kg_service", _FakeKG())
+
+        resp = client.post(
+            "/api/formulas?domains=not_a_real_domain",
+            json={
+                "name": "域名校验配方",
+                "code": "DOMAIN-CHECK",
+                "category": "其他",
+                "items": [
+                    {
+                        "material": {"name": "水", "function": "其他"},
+                        "weight_percent": 100.0,
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 400

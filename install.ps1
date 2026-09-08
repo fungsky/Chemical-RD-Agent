@@ -239,8 +239,7 @@ if (-not $InstallOnly) {
         Write-Info "启动 API 服务 (端口 8000)..."
         Start-Process -NoNewWindow -FilePath $PY -ArgumentList "-m", "uvicorn", "chem_agent.api.main:app", "--host", "0.0.0.0", "--port", "8000"
 
-        Write-Info "启动 Streamlit UI (端口 8501)..."
-        Start-Process -NoNewWindow -FilePath $PY -ArgumentList "-m", "streamlit", "run", "chem_agent/ui/app.py", "--server.port", "8501", "--server.address", "0.0.0.0"
+        Write-Info "旧 Streamlit UI 已停用；新版前端在 web/ 目录：cd web && npm install && npm run dev"
     } else {
         Write-Info "Docker Compose 模式启动..."
         if ($hasDocker) {
@@ -257,7 +256,7 @@ if (-not $InstallOnly) {
     # 打开浏览器
     Start-Sleep 2
     Write-Info "打开浏览器..."
-    Start-Process "http://localhost:8501"
+    Start-Process "http://localhost:5173"
 }
 
 
