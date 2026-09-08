@@ -2,13 +2,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 配置 Debian 国内镜像源（阿里云）
-RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
-    sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list 2>/dev/null || true
+ARG APT_MIRROR_URL=""
+ARG PIP_INDEX_URL=""
 
-# 配置 pip 国内镜像源（清华）
-RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    && pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+# 默认使用官方源；国内构建可通过 --build-arg 覆盖：
+# docker build --build-arg APT_MIRROR_URL=https://mirrors.aliyun.com --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+RUN if [ -n "$APT_MIRROR_URL" ]; then \
+        sed -i "s|deb.debian.org|$APT_MIRROR_URL|g" /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+        sed -i "s|deb.debian.org|$APT_MIRROR_URL|g" /etc/apt/sources.list 2>/dev/null || true; \
+    fi
+RUN if [ -n "$PIP_INDEX_URL" ]; then \
+        pip config set global.index-url "$PIP_INDEX_URL"; \
+    fi
 
 # 系统依赖 (PostgreSQL 客户端库给 psycopg2 用)
 RUN apt-get update && apt-get install -y --no-install-recommends \
