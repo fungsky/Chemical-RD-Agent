@@ -469,6 +469,15 @@ export default function FormulaCenter() {
           </Form.Item>
 
           <Typography.Title level={5}>组分（比例需合计 95–105%）</Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -4 }}>
+            材料从原料库模糊选择；功能分类会自动可改；配比是占配方总量的质量百分比。
+          </Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 8, color: '#888', fontSize: 12, marginBottom: 4 }}>
+            <span style={{ width: 280 }}>材料名称</span>
+            <span style={{ width: 150 }}>功能分类</span>
+            <span style={{ width: 110 }}>配比（%）</span>
+            <span>操作</span>
+          </div>
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
@@ -509,6 +518,15 @@ export default function FormulaCenter() {
           <Typography.Title level={5} style={{ marginTop: 16 }}>
             性能测试（可选）
           </Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -4 }}>
+            测试项可模糊选择已有指标；值填写该配方实际检测结果，单位如 H/MPa/h。
+          </Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 8, color: '#888', fontSize: 12, marginBottom: 4 }}>
+            <span style={{ width: 220 }}>测试项</span>
+            <span style={{ width: 140 }}>值</span>
+            <span style={{ width: 120 }}>单位</span>
+            <span>操作</span>
+          </div>
           <Form.List name="performance">
             {(fields, { add, remove }) => (
               <>
