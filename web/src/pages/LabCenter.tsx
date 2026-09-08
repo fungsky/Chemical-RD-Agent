@@ -57,6 +57,7 @@ export default function LabCenter() {
 
   const [predItems, setPredItems] = useState<any[]>([{ name: '', function: '基础树脂', weight_percent: 100 }]);
   const [predCat, setPredCat] = useState('胶粘剂');
+  const [predFormulaCode, setPredFormulaCode] = useState('');
   const [predProps, setPredProps] = useState<any[]>([]);
   const [predRes, setPredRes] = useState<any[]>([]);
   const [trainRes, setTrainRes] = useState<any>(null);
@@ -479,7 +480,44 @@ export default function LabCenter() {
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               <Card title="输入配方与目标指标" style={{ borderRadius: 12 }}>
                 <Space wrap style={{ marginBottom: 10 }}>
-                  <Select value={predCat} onChange={setPredCat} style={{ width: 180 }} options={CATEGORIES.map((c) => ({ label: c, value: c }))} />
+                  <Select
+                    value={predCat}
+                    onChange={(v) => {
+                      setPredCat(v);
+                      setPredFormulaCode('');
+                      setPredItems([{ name: '', function: '其他', weight_percent: 0 }]);
+                    }}
+                    style={{ width: 160 }}
+                    options={CATEGORIES.map((c) => ({ label: c, value: c }))}
+                  />
+                  <Select
+                    showSearch
+                    value={predFormulaCode || undefined}
+                    placeholder="选择配方（联动带出组分）"
+                    style={{ minWidth: 260 }}
+                    optionFilterProp="label"
+                    options={formulaOptions
+                      .filter((r: any) => r.formula?.category === predCat)
+                      .map((r: any) => ({
+                        label: `${r.formula?.code} | ${r.formula?.name}`,
+                        value: r.formula?.code,
+                      }))}
+                    onChange={(code) => {
+                      setPredFormulaCode(code);
+                      const hit = formulaOptions.find((r: any) => r.formula?.code === code);
+                      if (!hit) return;
+                      const f = hit.formula || {};
+                      setPredItems(
+                        (f.items || []).map((it: any) => ({
+                          name: it.material?.name || '',
+                          function: it.material?.function || '其他',
+                          weight_percent: it.weight_percent || 0,
+                        })),
+                      );
+                      const perfNames = (f.performance || []).map((p: any) => p.test_name);
+                      setPredProps(perfNames.filter((n: string) => availableProps.some((p) => p.name === n)));
+                    }}
+                  />
                   <Select
                     mode="multiple"
                     allowClear
