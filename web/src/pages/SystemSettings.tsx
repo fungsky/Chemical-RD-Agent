@@ -76,6 +76,15 @@ export default function SystemSettings() {
   const [userOpen, setUserOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
+  const [showThinking, setShowThinking] = useState(
+    localStorage.getItem('chem_show_thinking') !== '0',
+  );
+
+  const changeShowThinking = (checked: boolean) => {
+    setShowThinking(checked);
+    localStorage.setItem('chem_show_thinking', checked ? '1' : '0');
+    message.success(checked ? '已开启：AI 显示思考过程' : '已关闭：AI 不显示思考过程');
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -200,6 +209,26 @@ export default function SystemSettings() {
     <Card style={{ borderRadius: 12 }} loading={loading}>
       <Tabs
         items={[
+          {
+            key: 'ux',
+            label: '界面功能',
+            children: (
+              <Card style={{ maxWidth: 640 }}>
+                <Space direction="vertical" size={12}>
+                  <Space align="center">
+                    <Switch checked={showThinking} onChange={changeShowThinking} />
+                    <div>
+                      <Typography.Text strong>显示 AI 思考过程</Typography.Text>
+                      <br />
+                      <Typography.Text type="secondary">
+                        开启后，智能体模式的每步推理、工具调用与分析过程会在问答下方折叠展示。
+                      </Typography.Text>
+                    </div>
+                  </Space>
+                </Space>
+              </Card>
+            ),
+          },
           {
             key: 'config',
             label: '系统配置',

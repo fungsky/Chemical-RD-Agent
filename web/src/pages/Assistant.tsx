@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Col, Input, Row, Space, Switch, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Collapse, Input, Row, Space, Switch, Tag, Typography } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -7,6 +7,8 @@ import { api } from '../api';
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
+  steps?: any[];
+  tools_used?: string[];
 }
 
 const QUICK = [
@@ -22,6 +24,9 @@ export default function Assistant() {
     content:
       '你好，我是 ChemAgent 研发助理。告诉我你的产品需求、要调整的配方，或要分析的实验数据，我帮你推进研发。',
   };
+  const [thinkingEnabled, setThinkingEnabled] = useState(
+    localStorage.getItem('chem_show_thinking') !== '0',
+  );
   const initialMessages = useMemo(() => {
     try {
       const cached = sessionStorage.getItem('chem_assistant_messages');
@@ -64,7 +69,15 @@ export default function Assistant() {
         history: [],
         use_agent: agentMode,
       });
-      setMessages((m) => [...m, { role: 'assistant', content: res.data.reply || '（无回复）' }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          content: res.data.reply || '（无回复）',
+          steps: res.data.steps || [],
+          tools_used: res.data.tools_used || [],
+        },
+      ]);
     } catch (e: any) {
       const detail = e?.response?.data?.detail || '请求失败，请确认后端已启动';
       message.error(typeof detail === 'string' ? detail : JSON.stringify(detail));
@@ -123,6 +136,35 @@ export default function Assistant() {
                 >
                   <div className={`message ${m.role === 'user' ? 'message-user' : 'message-assistant'}`}>
                     {m.content}
+                    {m.role === 'assistant' && thinkingEnabled && !!m.steps?.length && (
+                      <Collapse
+                        ghost
+                        size="small"
+                        style={{ marginTop: 10, background: 'transparent' }}
+                        items={[
+                          {
+                            key: 'steps',
+                            label: `思考过程（${m.steps.length} 步${m.tools_used?.length ? ` · 调用 ${m.tools_used.length} 个工具` : ''}）`,
+                            children: (
+                              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                                {m.steps.map((step, si) => (
+                                  <div key={si}>
+                                    <Tag color={step.type === 'error' ? 'red' : 'blue'} style={{ marginRight: 6 }}>
+                                      {step.type || 'step'}
+                                    </Tag>
+                                    {step.type === 'action' ? (
+                                      <Typography.Text code>{step.tool_name || ''}</Typography.Text>
+                                    ) : (
+                                      <Typography.Text>{String(step.content || '').slice(0, 500)}</Typography.Text>
+                                    )}
+                                  </div>
+                                ))}
+                              </Space>
+                            ),
+                          },
+                        ]}
+                      />
+                    )}
                     {m.role === 'assistant' && i !== 0 && (
                       <div style={{ marginTop: 8 }}>
                         {savedMap[i] ? (
