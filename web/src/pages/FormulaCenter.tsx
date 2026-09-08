@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   App,
+  AutoComplete,
   Button,
   Card,
   Descriptions,
@@ -90,6 +91,11 @@ export default function FormulaCenter() {
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState<string | undefined>();
   const [rows, setRows] = useState<any[]>([]);
+  const [materialNames, setMaterialNames] = useState<string[]>([]);
+  const [propertyNames, setPropertyNames] = useState<string[]>([
+    '硬度', '光泽度', '附着力', '耐冲击性', '粘度', '固含',
+    '干燥时间', '盐雾时间', '耐老化时间', '拉伸强度', '断裂伸长率', '外观',
+  ]);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<Formula | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -151,6 +157,15 @@ export default function FormulaCenter() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    api
+      .get('/materials', { params: { keyword: '', limit: 300 } })
+      .then((res) =>
+        setMaterialNames((res.data || []).map((m: any) => String(m.name || '')).filter(Boolean)),
+      )
+      .catch(() => setMaterialNames([]));
+  }, []);
 
   const showDetail = async (code: string) => {
     try {
@@ -460,7 +475,14 @@ export default function FormulaCenter() {
                 {fields.map((field) => (
                   <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
                     <Form.Item name={[field.name, 'name']} rules={[{ required: true }]}>
-                      <Input placeholder="材料名称" style={{ width: 260 }} />
+                      <AutoComplete
+                        placeholder="材料名称（模糊搜索已有材料）"
+                        style={{ width: 280 }}
+                        options={materialNames.map((n) => ({ label: n, value: n }))}
+                        filterOption={(input, option) =>
+                          (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                        }
+                      />
                     </Form.Item>
                     <Form.Item name={[field.name, 'function']}>
                       <Select
@@ -493,7 +515,14 @@ export default function FormulaCenter() {
                 {fields.map((field) => (
                   <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
                     <Form.Item name={[field.name, 'test_name']}>
-                      <Input placeholder="测试项" style={{ width: 220 }} />
+                      <AutoComplete
+                        placeholder="测试项（模糊搜索）"
+                        style={{ width: 220 }}
+                        options={propertyNames.map((n) => ({ label: n, value: n }))}
+                        filterOption={(input, option) =>
+                          (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                        }
+                      />
                     </Form.Item>
                     <Form.Item name={[field.name, 'value']}>
                       <Input type="number" style={{ width: 140 }} placeholder="值" />

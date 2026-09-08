@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   App,
+  AutoComplete,
   Button,
   Card,
   Descriptions,
@@ -54,6 +55,7 @@ export default function LabCenter() {
     { name: '', value: undefined, unit: '', min: undefined, max: undefined, target: undefined },
   ]);
   const [availableProps, setAvailableProps] = useState<any[]>([]);
+  const [materialOptions, setMaterialOptions] = useState<any[]>([]);
 
   const [predItems, setPredItems] = useState<any[]>([{ name: '', function: '基础树脂', weight_percent: 100 }]);
   const [predCat, setPredCat] = useState('胶粘剂');
@@ -116,6 +118,10 @@ export default function LabCenter() {
         );
       })
       .catch(() => setFormulaOptions([]));
+    api
+      .get('/materials', { params: { keyword: '', limit: 200 } })
+      .then((res) => setMaterialOptions(res.data || []))
+      .catch(() => setMaterialOptions([]));
   }, []);
 
   const generateDoe = async () => {
@@ -380,11 +386,21 @@ export default function LabCenter() {
               <Card title="因子设置" style={{ borderRadius: 12 }}>
                 {factors.map((f, idx) => (
                   <Space key={idx} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
-                    <Input
+                    <AutoComplete
                       placeholder="因子名，如固化温度"
                       value={f.name}
-                      style={{ width: 200 }}
-                      onChange={(e) => updateFactors(idx, { name: e.target.value })}
+                      style={{ width: 220 }}
+                      onChange={(v) => updateFactors(idx, { name: v })}
+                      options={[
+                        ...materialOptions.map((m) => ({ label: m.name, value: m.name })),
+                        ...['固化温度', '固化时间', '搅拌速度', '搅拌时间', '反应温度', '压力'].map((x) => ({
+                          label: x,
+                          value: x,
+                        })),
+                      ]}
+                      filterOption={(input, option) =>
+                        (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                      }
                     />
                     <Input
                       placeholder="单位"
@@ -434,7 +450,18 @@ export default function LabCenter() {
                 <Card title="设计方案" style={{ borderRadius: 12 }}>
                   <Table rowKey="run_order" dataSource={doeRows} columns={doeColumns} pagination={false} size="small" />
                   <Space style={{ marginTop: 12 }} wrap>
-                    <Input style={{ width: 180 }} value={planFormula} onChange={(e) => setPlanFormula(e.target.value)} placeholder="配方名称/编号" addonBefore="配方" />
+                    <Select
+                      showSearch
+                      style={{ width: 220 }}
+                      value={planFormula || undefined}
+                      placeholder="选择配方"
+                      optionFilterProp="label"
+                      onChange={(v) => setPlanFormula(v)}
+                      options={formulaOptions.map((r: any) => ({
+                        label: `${r.formula?.code} | ${r.formula?.name}`,
+                        value: r.formula?.code,
+                      }))}
+                    />
                     <Input style={{ width: 200 }} value={planProject} onChange={(e) => setPlanProject(e.target.value)} placeholder="所属项目" addonBefore="项目" />
                     <Input style={{ width: 180 }} value={planPrefix} onChange={(e) => setPlanPrefix(e.target.value)} placeholder="批次/编号前缀" addonBefore="前缀" />
                     <Button type="primary" loading={planning} onClick={planFromDoe}>
@@ -533,11 +560,21 @@ export default function LabCenter() {
                 </Space>
                 {predItems.map((item, idx) => (
                   <Space key={idx} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
-                    <Input
+                    <AutoComplete
                       placeholder="材料名称"
                       value={item.name}
-                      style={{ width: 240 }}
-                      onChange={(e) => updatePredItems(idx, { name: e.target.value })}
+                      style={{ width: 260 }}
+                      options={materialOptions.map((m) => ({ label: m.name, value: m.name }))}
+                      onChange={(name) => {
+                        const hit = materialOptions.find((m) => m.name === name);
+                        updatePredItems(idx, {
+                          name,
+                          function: item.function || hit?.function || '其他',
+                        });
+                      }}
+                      filterOption={(input, option) =>
+                        (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                      }
                     />
                     <Select
                       value={item.function}
@@ -699,7 +736,17 @@ export default function LabCenter() {
                 {fields.map((field) => (
                   <Space key={field.key} align="baseline" style={{ display: 'flex', marginBottom: 6 }}>
                     <Form.Item name={[field.name, 'name']} rules={[{ required: true, message: '指标' }]}>
-                      <Input placeholder="指标名（如 硬度）" style={{ width: 150 }} />
+                      <AutoComplete
+                        placeholder="指标名（如 硬度）"
+                        style={{ width: 180 }}
+                        options={availableProps.map((p) => ({
+                          label: `${p.name}（${p.samples} 条）`,
+                          value: p.name,
+                        }))}
+                        filterOption={(input, option) =>
+                          (option?.value || '').toLowerCase().includes(input.toLowerCase())
+                        }
+                      />
                     </Form.Item>
                     <Form.Item name={[field.name, 'value']}>
                       <Input type="number" placeholder="实测值" style={{ width: 100 }} />
