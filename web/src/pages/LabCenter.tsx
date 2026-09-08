@@ -32,16 +32,16 @@ const CATEGORIES = ['涂料', '胶粘剂', '密封剂', '树脂', '塑料', '橡
 interface FactorRow {
   name: string;
   unit: string;
-  low: number;
-  high: number;
-  center?: number;
+  low: number | string;
+  high: number | string;
+  center?: number | string;
 }
 
 export default function LabCenter() {
   const { message } = App.useApp();
   const [doeRows, setDoeRows] = useState<any[]>([]);
   const [doeMethod, setDoeMethod] = useState('full_factorial');
-  const [factors, setFactors] = useState<FactorRow[]>([{ name: '', unit: '', low: 0, high: 100, center: 50 }]);
+  const [factors, setFactors] = useState<FactorRow[]>([{ name: '', unit: '', low: '', high: '', center: '' }]);
   const [doeLoading, setDoeLoading] = useState(false);
 
   const [expStats, setExpStats] = useState<any>(null);
@@ -125,23 +125,42 @@ export default function LabCenter() {
   }, []);
 
   const generateDoe = async () => {
-    const valid = factors.filter((f) => f.name.trim());
-    if (!valid.length) {
-      message.warning('请填写至少一个因子');
+    const missing: string[] = [];
+    const valid = factors.filter((f) => {
+      const name = f.name.trim();
+      if (!name) {
+        return false;
+      }
+      if (f.low === '' || f.high === '' || f.low === undefined || f.high === undefined) {
+        missing.push(`${name} 的低值/高值`);
+        return false;
+      }
+      return true;
+    });
+    if (missing.length || !valid.length) {
+      message.warning(missing.length ? `请补全：${missing.join('；')}` : '请至少填写一个因子');
       return;
     }
     setDoeLoading(true);
     try {
       const res = await api.post('/doe/generate', {
         method: doeMethod,
-        factors: valid.map((f) => ({
-          name: f.name,
-          unit: f.unit,
-          low: Number(f.low),
-          high: Number(f.high),
-          center: f.center === undefined || f.center === null || f.center === 0 ? null : Number(f.center),
-          category: 'continuous',
-        })),
+        factors: valid.map((f) => {
+          const low = Number(f.low);
+          const high = Number(f.high);
+          const center =
+            f.center === '' || f.center === undefined || f.center === null
+              ? (low + high) / 2
+              : Number(f.center);
+          return {
+            name: f.name,
+            unit: f.unit,
+            low,
+            high,
+            center,
+            category: 'continuous',
+          };
+        }),
         replicates: 1,
         center_points: 0,
         randomize: false,
@@ -384,6 +403,18 @@ export default function LabCenter() {
                 </Space>
               </Card>
               <Card title="因子设置" style={{ borderRadius: 12 }}>
+                <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                  因子 = 本次要考察的变量。低值/高值给出试验范围；中心点可留空，留空时自动取低值与高值的平均值。
+                  示例：固化温度 60~120℃，中心点自动为 90℃。
+                </Typography.Paragraph>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 4, color: '#888', fontSize: 12 }}>
+                  <span style={{ width: 220 }}>因子名称（可选材料/工艺参数）</span>
+                  <span style={{ width: 100 }}>单位</span>
+                  <span style={{ width: 110 }}>低值（范围下限）</span>
+                  <span style={{ width: 110 }}>高值（范围上限）</span>
+                  <span style={{ width: 130 }}>中心点（可留空）</span>
+                  <span>操作</span>
+                </div>
                 {factors.map((f, idx) => (
                   <Space key={idx} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
                     <AutoComplete
@@ -424,21 +455,21 @@ export default function LabCenter() {
                     />
                     <Input
                       type="number"
-                      placeholder="低值"
+                      placeholder="如 60"
                       value={f.low}
                       style={{ width: 110 }}
                       onChange={(e) => updateFactors(idx, { low: Number(e.target.value) })}
                     />
                     <Input
                       type="number"
-                      placeholder="高值"
+                      placeholder="如 120"
                       value={f.high}
                       style={{ width: 110 }}
                       onChange={(e) => updateFactors(idx, { high: Number(e.target.value) })}
                     />
                     <Input
                       type="number"
-                      placeholder="中心点(可空)"
+                      placeholder="留空=自动"
                       value={f.center ?? ''}
                       style={{ width: 130 }}
                       onChange={(e) => updateFactors(idx, { center: e.target.value === '' ? undefined : Number(e.target.value) })}
@@ -455,7 +486,7 @@ export default function LabCenter() {
                 <Button
                   type="dashed"
                   block
-                  onClick={() => setFactors([...factors, { name: '', unit: '', low: 0, high: 100 }])}
+                  onClick={() => setFactors([...factors, { name: '', unit: '', low: '', high: '', center: '' }])}
                 >
                   + 添加因子
                 </Button>
@@ -744,6 +775,18 @@ export default function LabCenter() {
             </Form.Item>
           </Space>
           <Typography.Title level={5}>检测结果（指标/实测值/单位/目标范围）</Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginTop: -6 }}>
+            目标≥/目标≤/目标值至少填一个即可自动判定；都留空表示只记录实测值。
+          </Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 8, color: '#888', fontSize: 12, marginBottom: 4 }}>
+            <span style={{ width: 180 }}>指标名</span>
+            <span style={{ width: 100 }}>实测值</span>
+            <span style={{ width: 80 }}>单位</span>
+            <span style={{ width: 100 }}>目标≥</span>
+            <span style={{ width: 100 }}>目标≤</span>
+            <span style={{ width: 100 }}>目标值</span>
+            <span>操作</span>
+          </div>
           <Form.List name="metric_rows">
             {(fields, { add, remove }) => (
               <>
