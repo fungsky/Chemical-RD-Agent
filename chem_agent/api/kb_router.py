@@ -157,6 +157,19 @@ async def list_documents(
     return kb.list_documents()
 
 
+@router.get("/documents/{doc_id}/chunks")
+async def get_document_chunks(
+    doc_id: str,
+    _user: UserOut = Depends(require_permission("knowledge:read")),
+):
+    """查看某个文档的原文分块（用于查阅/核验 AI 引用）。"""
+    kb = _get_kb_service()
+    chunks = kb.get_document_chunks(doc_id, limit=10000)
+    if not chunks:
+        raise HTTPException(status_code=404, detail="文档不存在或无内容")
+    return {"doc_id": doc_id, "chunks": chunks, "total": len(chunks)}
+
+
 # ============ 删除文档 ============
 
 

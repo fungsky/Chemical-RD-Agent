@@ -51,7 +51,7 @@ export default function Workbench() {
         </Col>
         <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
-            <Statistic title="知识图谱" value={stats?.connected ? '已连接' : '未连接'} />
+            <Statistic title="知识库" value={stats?.connected ? '已连接' : '未连接'} />
           </Card>
         </Col>
       </Row>

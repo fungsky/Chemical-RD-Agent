@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import FastAPI, Depends, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from chem_agent.config import settings
 from chem_agent.api.error_handler import (
@@ -277,6 +277,13 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[list] = None
     use_agent: bool = False
+
+
+class SaveFormulaFromTextRequest(BaseModel):
+    requirement: str = ""
+    text: str = Field(..., description="AI 回复的配方文本")
+    category: str = "其他"
+    target_performance: dict = {}
 
 
 class ChatResponse(BaseModel):
@@ -804,6 +811,66 @@ async def create_formula(
     except Exception as e:
         logger.error("保存配方失败: %s", e)
         raise ChemAgentError(error_code=ErrorCode.DB_QUERY_FAILED, internal_detail=str(e))
+
+
+@app.post("/api/formulas/save-from-text", response_model=dict)
+async def save_formula_from_text(
+    request: SaveFormulaFromTextRequest,
+    current_user: UserOut = Depends(require_permission("formula:write")),
+):
+    """把 AI 回答/推荐文本解析成配方并一键保存为草稿。"""
+    try:
+        raw = await llm_service.extract_recommendation_formula(
+            requirement=request.requirement or request.text,
+            category=request.category,
+            target_performance=request.target_performance,
+            recommendation=request.text,
+            reference_results=[],
+        )
+        if not raw:
+            raise ChemAgentError(
+                error_code=ErrorCode.INPUT_INVALID,
+                user_message="无法从回答中识别出可保存的配方，请描述明确的组分/比例或改用『配方推荐』页面",
+                status_code=400,
+            )
+        raw.setdefault(
+            "code",
+            "AI-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
+        )
+        formula = Formula(**raw)
+        existing = kg_service.get_formula(formula.code) if formula.code else None
+        formula_id = kg_service.upsert_formula(formula)
+        _cache.clear()
+
+        warnings = _risk_warnings(formula)
+        if formula.code:
+            try:
+                from chem_agent.auth import database as auth_db
+                latest = auth_db.get_latest_formula_version(formula.code)
+                if existing is None or not _snapshot_semantic_equal(
+                    (latest or {}).get("snapshot_data"), formula.model_dump(mode="json")
+                ):
+                    auth_db.save_formula_version(
+                        formula_code=formula.code,
+                        snapshot_data=formula.model_dump(mode="json"),
+                        change_summary="AI 推荐配方保存",
+                        changed_by=current_user.username,
+                    )
+            except Exception as e:
+                logger.warning("AI 配方版本快照保存失败: %s", e)
+
+        return {
+            "success": True,
+            "id": formula_id,
+            "code": formula.code,
+            "name": formula.name,
+            "warnings": warnings,
+        }
+    except ChemAgentError:
+        raise
+    except Exception as e:
+        logger.error("AI 配方保存失败: %s", e)
+        raise ChemAgentError(error_code=ErrorCode.INTERNAL, internal_detail=str(e))
 
 
 @app.get("/api/formulas", response_model=list[FormulaSearchResult])

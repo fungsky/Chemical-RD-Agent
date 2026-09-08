@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Col, Empty, Input, Row, Space, Tag, Typography } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 
 interface Msg {
@@ -15,14 +16,28 @@ const QUICK = [
 ];
 
 export default function Assistant() {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content: '你好，我是 ChemAgent 研发助理。告诉我你的产品需求、要调整的配方，或要分析的实验数据，我帮你推进研发。',
-    },
-  ]);
+  const navigate = useNavigate();
+  const welcome: Msg = {
+    role: 'assistant',
+    content:
+      '你好，我是 ChemAgent 研发助理。告诉我你的产品需求、要调整的配方，或要分析的实验数据，我帮你推进研发。',
+  };
+  const initialMessages = useMemo(() => {
+    try {
+      const cached = sessionStorage.getItem('chem_assistant_messages');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length) return parsed as Msg[];
+      }
+    } catch {
+      /* ignore */
+    }
+    return [welcome];
+  }, []);
+  const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savedMap, setSavedMap] = useState<Record<number, string>>({});
   const { message } = App.useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +46,10 @@ export default function Assistant() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  useEffect(() => {
+    sessionStorage.setItem('chem_assistant_messages', JSON.stringify(messages));
+  }, [messages]);
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
@@ -54,6 +73,30 @@ export default function Assistant() {
     }
   };
 
+  const saveAsFormula = async (index: number) => {
+    const current = messages[index];
+    let requirement = '';
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (messages[i].role === 'user') {
+        requirement = messages[i].content;
+        break;
+      }
+    }
+    try {
+      const res = await api.post('/formulas/save-from-text', {
+        requirement,
+        text: current.content,
+        category: '其他',
+        target_performance: {},
+      });
+      setSavedMap((m) => ({ ...m, [index]: res.data.code }));
+      message.success(`已保存为配方草稿：${res.data.code}`);
+    } catch (e: any) {
+      const d = e?.response?.data?.detail || e?.response?.data?.message;
+      message.error(typeof d === 'string' ? d : '无法从回答中识别可保存配方');
+    }
+  };
+
   return (
     <Row gutter={16}>
       <Col flex="auto">
@@ -71,6 +114,19 @@ export default function Assistant() {
                 >
                   <div className={`message ${m.role === 'user' ? 'message-user' : 'message-assistant'}`}>
                     {m.content}
+                    {m.role === 'assistant' && i !== 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        {savedMap[i] ? (
+                          <Button size="small" type="link" onClick={() => navigate('/formula')}>
+                            查看配方库（{savedMap[i]}）→
+                          </Button>
+                        ) : (
+                          <Button size="small" type="primary" ghost disabled={loading} onClick={() => saveAsFormula(i)}>
+                            保存为配方草稿
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

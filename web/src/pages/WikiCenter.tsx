@@ -5,6 +5,7 @@ import {
   Card,
   Input,
   Modal,
+  Select,
   Space,
   Table,
   Tabs,
@@ -49,6 +50,12 @@ export default function WikiCenter() {
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<WikiHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [docOpen, setDocOpen] = useState(false);
+  const [docChunks, setDocChunks] = useState<string[]>([]);
+  const [pageOpen, setPageOpen] = useState(false);
+  const [editingPage, setEditingPage] = useState<WikiPageRow | null>(null);
+  const [pageDetail, setPageDetail] = useState<any>(null);
+  const [pageSaving, setPageSaving] = useState(false);
 
   const loadAll = async () => {
     try {
@@ -117,6 +124,46 @@ export default function WikiCenter() {
     }
   };
 
+  const viewDoc = async (doc: DocRow) => {
+    try {
+      const res = await api.get(`/kb/documents/${doc.doc_id}/chunks`);
+      setDocChunks(res.data?.chunks || []);
+      setDocOpen(true);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '原文读取失败');
+    }
+  };
+
+  const openPage = async (page: WikiPageRow) => {
+    try {
+      const res = await api.get(`/kb/wiki/pages/${page.page_id}`);
+      setPageDetail(res.data);
+      setEditingPage(page);
+      setPageOpen(true);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '页面读取失败');
+    }
+  };
+
+  const savePage = async () => {
+    if (!editingPage) return;
+    setPageSaving(true);
+    try {
+      await api.put(`/kb/wiki/pages/${editingPage.page_id}`, {
+        title: pageDetail?.title,
+        content: pageDetail?.content,
+        status: pageDetail?.status,
+      });
+      message.success('修正已保存并重新编入检索');
+      setPageOpen(false);
+      loadAll();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '保存失败');
+    } finally {
+      setPageSaving(false);
+    }
+  };
+
   const search = async () => {
     if (!query.trim()) return;
     setSearching(true);
@@ -140,6 +187,9 @@ export default function WikiCenter() {
       width: 220,
       render: (_, doc) => (
         <Space>
+          <Button size="small" icon={<SearchOutlined />} onClick={() => viewDoc(doc)}>
+            查看原文
+          </Button>
           <Button size="small" type="primary" icon={<RocketOutlined />} loading={compiling === doc.doc_id} onClick={() => compile(doc)}>
             编译 Wiki
           </Button>
@@ -157,16 +207,22 @@ export default function WikiCenter() {
     { title: '创建时间', dataIndex: 'created_at', width: 190 },
     {
       title: '操作',
-      width: 100,
+      width: 220,
       render: (_, p) => (
-        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => deletePage(p)}>
-          删除
-        </Button>
+        <Space>
+          <Button size="small" onClick={() => openPage(p)}>
+            查看/修正
+          </Button>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => deletePage(p)}>
+            删除
+          </Button>
+        </Space>
       ),
     },
   ];
 
   return (
+    <>
     <Tabs
       items={[
         {
@@ -243,5 +299,53 @@ export default function WikiCenter() {
         },
       ]}
     />
+    <Modal
+      title="原文分块"
+      open={docOpen}
+      footer={<Button onClick={() => setDocOpen(false)}>关闭</Button>}
+      onCancel={() => setDocOpen(false)}
+      width={760}
+    >
+      {docChunks.map((c, i) => (
+        <Card key={i} size="small" title={`分块 ${i + 1}`} style={{ marginBottom: 8 }}>
+          <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{c}</Typography.Paragraph>
+        </Card>
+      ))}
+      {!docChunks.length && <Typography.Text type="secondary">无内容</Typography.Text>}
+    </Modal>
+    <Modal
+      title={`查看 / 修正：${editingPage?.title || ''}`}
+      open={pageOpen}
+      onCancel={() => setPageOpen(false)}
+      onOk={savePage}
+      confirmLoading={pageSaving}
+      width={860}
+      destroyOnClose
+    >
+      <Input
+        value={pageDetail?.title || ''}
+        onChange={(e) => setPageDetail((p: any) => ({ ...p, title: e.target.value }))}
+        style={{ marginBottom: 10, fontSize: 16, fontWeight: 600 }}
+      />
+      <Input.TextArea
+        rows={16}
+        value={pageDetail?.content || ''}
+        onChange={(e) => setPageDetail((p: any) => ({ ...p, content: e.target.value }))}
+        style={{ fontFamily: 'monospace', fontSize: 13 }}
+      />
+      <Space style={{ marginTop: 10 }}>
+        <span>状态：</span>
+        <Select
+          value={pageDetail?.status || 'draft'}
+          style={{ width: 140 }}
+          onChange={(v) => setPageDetail((p: any) => ({ ...p, status: v }))}
+          options={[
+            { value: 'draft', label: '草稿' },
+            { value: 'reviewed', label: '已复核' },
+          ]}
+        />
+      </Space>
+    </Modal>
+    </>
   );
 }

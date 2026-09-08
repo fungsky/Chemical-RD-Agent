@@ -1,8 +1,10 @@
 """LLM Wiki API：编译、检索、管理知识页。"""
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from chem_agent.auth.dependencies import require_permission
 from chem_agent.auth.models import UserOut
@@ -11,6 +13,12 @@ from chem_agent.wiki.models import WikiCompileRequest, WikiSearchRequest, WikiSe
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/kb/wiki", tags=["LLM Wiki"])
+
+
+class WikiUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    status: Optional[str] = None
 
 
 def _get_services():
@@ -54,6 +62,38 @@ async def search_wiki(req: WikiSearchRequest, _user: UserOut = Depends(require_p
     except Exception as e:
         logger.error("Wiki 检索失败: %s", e)
         raise HTTPException(status_code=500, detail=f"Wiki 检索失败: {e}")
+
+
+@router.get("/pages/{page_id}", summary="查看 Wiki 页面")
+async def get_wiki_page(page_id: str, _user: UserOut = Depends(require_permission("knowledge:read"))):
+    _, wiki = _get_services()
+    page = wiki.get_page(page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Wiki 页面不存在")
+    return page
+
+
+@router.put("/pages/{page_id}", summary="修正 Wiki 页面")
+async def update_wiki_page(
+    page_id: str,
+    req: WikiUpdateRequest,
+    current_user: UserOut = Depends(require_permission("knowledge:write")),
+):
+    _, wiki = _get_services()
+    try:
+        page = await wiki.update_page(
+            page_id=page_id,
+            title=req.title,
+            content=req.content,
+            status=req.status,
+            changed_by=current_user.username,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Wiki 页面修正失败: %s", e)
+        raise HTTPException(status_code=500, detail=f"Wiki 页面修正失败: {e}")
+    return {"success": True, "page": page}
 
 
 @router.delete("/pages/{page_id}", summary="删除 Wiki 页面")

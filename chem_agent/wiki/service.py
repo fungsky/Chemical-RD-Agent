@@ -95,6 +95,69 @@ class WikiService:
             })
         return pages
 
+    def get_page(self, page_id: str) -> Optional[dict]:
+        data = self._collection.get(ids=[page_id], include=["documents", "metadatas"])
+        if not data.get("ids"):
+            return None
+        meta = (data.get("metadatas") or [{}])[0]
+        docs = data.get("documents") or [""]
+        return {
+            "page_id": page_id,
+            "title": meta.get("title", ""),
+            "status": meta.get("status", "draft"),
+            "content": docs[0] if docs else "",
+            "source_docs": json.loads(meta.get("source_docs", "[]")),
+            "aliases": json.loads(meta.get("aliases", "[]")),
+            "created_at": meta.get("created_at", ""),
+            "updated_at": meta.get("updated_at", ""),
+            "revision_log": json.loads(meta.get("revision_log", "[]")),
+        }
+
+    async def update_page(
+        self,
+        page_id: str,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        status: Optional[str] = None,
+        changed_by: Optional[str] = None,
+    ) -> dict:
+        current = self.get_page(page_id)
+        if not current:
+            raise ValueError("Wiki 页面不存在")
+
+        new_title = (title or current["title"]).strip()
+        new_content = (content or current["content"]).strip()
+        if not new_title or not new_content:
+            raise ValueError("标题和内容不能为空")
+
+        old_log = current.get("revision_log") or []
+        revision = {
+            "changed_by": changed_by,
+            "changed_at": datetime.now(timezone.utc).isoformat(),
+            "old_title": current["title"],
+            "old_preview": (current["content"] or "")[:200],
+        }
+        old_log.insert(0, revision)
+        old_log = old_log[:5]
+        now = datetime.now(timezone.utc).isoformat()
+        embedding = await self._llm.get_embedding(new_content)
+        self._collection.upsert(
+            ids=[page_id],
+            embeddings=[embedding],
+            documents=[new_content],
+            metadatas=[{
+                "page_id": page_id,
+                "title": new_title,
+                "aliases": json.dumps(current.get("aliases") or [], ensure_ascii=False),
+                "source_docs": json.dumps(current.get("source_docs") or [], ensure_ascii=False),
+                "status": (status or current["status"]).strip() or "draft",
+                "created_at": current.get("created_at", now),
+                "updated_at": now,
+                "revision_log": json.dumps(old_log, ensure_ascii=False),
+            }],
+        )
+        return self.get_page(page_id) or {}
+
     def delete_page(self, page_id: str) -> bool:
         self._collection.delete(ids=[page_id])
         return True

@@ -15,9 +15,18 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api';
+import { Upload } from 'antd';
 
 const CATEGORIES = [
   '涂料',
@@ -88,6 +97,7 @@ export default function FormulaCenter() {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Formula | null>(null);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [form] = Form.useForm();
   const { message } = App.useApp();
 
@@ -104,6 +114,39 @@ export default function FormulaCenter() {
       setLoading(false);
     }
   }, [keyword, category, message]);
+
+  const exportFormulas = async () => {
+    try {
+      const res = await api.get('/formulas/export', {
+        params: { format: 'json' },
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `formulas_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '导出失败');
+    }
+  };
+
+  const doImport = async (file: File) => {
+    setImporting(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await api.post('/formulas/import', fd);
+      const s = res.data?.summary;
+      message.success(`导入完成：成功 ${s?.success || 0}，跳过 ${s?.skipped || 0}，失败 ${s?.failed || 0}`);
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '导入失败');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -288,6 +331,23 @@ export default function FormulaCenter() {
           <Button icon={<ReloadOutlined />} onClick={load}>
             刷新
           </Button>
+          <Button icon={<DownloadOutlined />} onClick={exportFormulas}>
+            导出 JSON
+          </Button>
+          <Upload
+            maxCount={1}
+            showUploadList={false}
+            accept=".json,.xlsx"
+            beforeUpload={() => false}
+            onChange={(info) => {
+              const file = info.fileList[0]?.originFileObj as File | undefined;
+              if (file) doImport(file);
+            }}
+          >
+            <Button icon={<UploadOutlined />} loading={importing}>
+              批量导入
+            </Button>
+          </Upload>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
             新建配方
           </Button>

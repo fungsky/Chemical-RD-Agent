@@ -14,7 +14,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api';
 
@@ -69,6 +69,20 @@ export default function LabCenter() {
       message.error(e?.response?.data?.detail || '实验数据加载失败');
     } finally {
       setExpLoading(false);
+    }
+  };
+
+  const exportTraining = async () => {
+    try {
+      const res = await api.get('/experiments/export/training-data', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `training_data_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '导出失败');
     }
   };
 
@@ -282,6 +296,9 @@ export default function LabCenter() {
               <Space style={{ marginBottom: 12 }}>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setExpOpen(true)}>
                   录入实验
+                </Button>
+                <Button icon={<DownloadOutlined />} onClick={exportTraining}>
+                  导出训练数据
                 </Button>
                 <Button onClick={loadExperiments}>刷新</Button>
               </Space>
