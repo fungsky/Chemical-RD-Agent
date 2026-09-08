@@ -53,6 +53,10 @@ class ExperimentResult(BaseModel):
         default_factory=dict,
         description="性能单位: {盐雾时间: h, 附着力: MPa, ...}",
     )
+    spec_targets: dict[str, dict] = Field(
+        default_factory=dict,
+        description="目标规格: {硬度: {min: 80, max: 100, unit: H}}",
+    )
 
     # 元数据
     operator: Optional[str] = Field(None, description="实验员")

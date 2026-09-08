@@ -47,6 +47,7 @@ export default function LabCenter() {
   const [expRows, setExpRows] = useState<any[]>([]);
   const [expLoading, setExpLoading] = useState(false);
   const [expOpen, setExpOpen] = useState(false);
+  const [editingExp, setEditingExp] = useState<any>(null);
   const [expForm] = Form.useForm();
 
   const [predItems, setPredItems] = useState<any[]>([{ name: '', function: '基础树脂', weight_percent: 100 }]);
@@ -55,6 +56,10 @@ export default function LabCenter() {
   const [predRes, setPredRes] = useState<any[]>([]);
   const [predLoading, setPredLoading] = useState(false);
   const [trainLoading, setTrainLoading] = useState(false);
+  const [planProject, setPlanProject] = useState('胶粘剂项目A');
+  const [planFormula, setPlanFormula] = useState('HF-001');
+  const [planPrefix, setPlanPrefix] = useState('EXP-001');
+  const [planning, setPlanning] = useState(false);
 
   const loadExperiments = async () => {
     setExpLoading(true);
@@ -123,32 +128,84 @@ export default function LabCenter() {
   const addExperiment = async (values: any) => {
     let condition = { items: [], process: {} };
     let measurements: Record<string, number> = {};
+    let specTargets: Record<string, any> = {};
     try {
       if (values.condition_text) condition = JSON.parse(values.condition_text);
       if (values.measurements_text) measurements = JSON.parse(values.measurements_text);
+      if (values.spec_targets_text) specTargets = JSON.parse(values.spec_targets_text);
     } catch {
-      message.warning('条件/测量数据 JSON 格式不正确');
+      message.warning('条件/测量/目标规格 JSON 格式不正确');
       return;
     }
+    const payload: any = {
+      experiment_id: values.experiment_id,
+      formula_name: values.formula_name,
+      project: values.project,
+      batch_number: values.batch_number,
+      status: values.status,
+      operator: values.operator,
+      doe_method: values.doe_method,
+      condition,
+      measurements,
+      spec_targets: specTargets,
+      notes: values.notes,
+    };
     try {
-      await api.post('/experiments/results', {
-        experiment_id: values.experiment_id,
-        formula_name: values.formula_name,
-        project: values.project,
-        batch_number: values.batch_number,
-        status: values.status,
-        operator: values.operator,
-        doe_method: values.doe_method,
-        condition,
-        measurements,
-        notes: values.notes,
+      if (editingExp) {
+        await api.patch(`/experiments/results/${editingExp.experiment_id}`, payload);
+      } else {
+        await api.post('/experiments/results', payload);
+      }
+      const failed = Object.entries(specTargets).filter(([name, spec]: any) => {
+        const v = measurements[name];
+        if (v === undefined) return true;
+        if (spec.min !== undefined && v < spec.min) return true;
+        if (spec.max !== undefined && v > spec.max) return true;
+        return false;
       });
-      message.success('实验记录已保存');
+      message.success(
+        failed.length
+          ? `实验已保存，但 ${failed.length} 项未达标：${failed.map(([n]) => n).join(', ')}`
+          : '实验已保存，全部指标满足目标规格',
+      );
       setExpOpen(false);
+      setEditingExp(null);
       loadExperiments();
     } catch (e: any) {
       message.error(e?.response?.data?.detail || '保存失败');
     }
+  };
+
+  const planFromDoe = async () => {
+    if (!doeRows.length) {
+      message.warning('请先生成 DOE 方案');
+      return;
+    }
+    setPlanning(true);
+    let ok = 0;
+    let skip = 0;
+    for (const row of doeRows) {
+      try {
+        await api.post('/experiments/results', {
+          experiment_id: `${planPrefix}-R${String(row.run_order).padStart(2, '0')}`,
+          formula_name: planFormula,
+          project: planProject,
+          batch_number: planPrefix,
+          status: 'planned',
+          doe_method: doeMethod,
+          doe_run_order: row.run_order,
+          condition: { items: [], process: row.factor_levels || {} },
+          measurements: {},
+          spec_targets: {},
+        });
+        ok += 1;
+      } catch {
+        skip += 1;
+      }
+    }
+    message.success(`已转实验计划 ${ok} 条${skip ? `（跳过重复 ${skip}）` : ''}`);
+    loadExperiments();
+    setPlanning(false);
   };
 
   const runPredict = async () => {
@@ -207,8 +264,51 @@ export default function LabCenter() {
     { title: '项目', dataIndex: 'project' },
     { title: '状态', dataIndex: 'status', render: (v) => <Tag>{v}</Tag> },
     { title: '性能指标', dataIndex: 'measurements', render: (v) => Object.keys(v || {}).join(', ') || '-' },
+    {
+      title: '目标判定',
+      dataIndex: 'spec_targets',
+      render: (specs, row) => {
+        if (!specs || !Object.keys(specs).length) return <Typography.Text type="secondary">未设目标</Typography.Text>;
+        const meas = row.measurements || {};
+        const failed = Object.entries(specs).filter(([name, spec]: any) => {
+          const v = meas[name];
+          if (v === undefined) return true;
+          if (spec.min !== undefined && v < spec.min) return true;
+          if (spec.max !== undefined && v > spec.max) return true;
+          return false;
+        });
+        return failed.length ? <Tag color="red">未达标 {failed.length}</Tag> : <Tag color="green">全部达标</Tag>;
+      },
+    },
     { title: '实验员', dataIndex: 'operator' },
+    {
+      title: '操作',
+      width: 130,
+      render: (_, row) => (
+        <Button size="small" disabled={row.status === 'completed'} onClick={() => openEditExp(row)}>
+          填写结果
+        </Button>
+      ),
+    },
   ];
+
+  const openEditExp = (row: any) => {
+    setEditingExp(row);
+    expForm.setFieldsValue({
+      experiment_id: row.experiment_id,
+      formula_name: row.formula_name,
+      project: row.project,
+      batch_number: row.batch_number,
+      status: 'completed',
+      operator: row.operator,
+      doe_method: row.doe_method,
+      condition_text: row.condition ? JSON.stringify(row.condition, null, 2) : '',
+      measurements_text: row.measurements && Object.keys(row.measurements).length ? JSON.stringify(row.measurements, null, 2) : '',
+      spec_targets_text: row.spec_targets && Object.keys(row.spec_targets).length ? JSON.stringify(row.spec_targets, null, 2) : '',
+      notes: row.notes,
+    });
+    setExpOpen(true);
+  };
 
   return (
     <>
@@ -283,6 +383,14 @@ export default function LabCenter() {
               {!!doeRows.length && (
                 <Card title="设计方案" style={{ borderRadius: 12 }}>
                   <Table rowKey="run_order" dataSource={doeRows} columns={doeColumns} pagination={false} size="small" />
+                  <Space style={{ marginTop: 12 }} wrap>
+                    <Input style={{ width: 180 }} value={planFormula} onChange={(e) => setPlanFormula(e.target.value)} placeholder="配方名称/编号" addonBefore="配方" />
+                    <Input style={{ width: 200 }} value={planProject} onChange={(e) => setPlanProject(e.target.value)} placeholder="所属项目" addonBefore="项目" />
+                    <Input style={{ width: 180 }} value={planPrefix} onChange={(e) => setPlanPrefix(e.target.value)} placeholder="批次/编号前缀" addonBefore="前缀" />
+                    <Button type="primary" loading={planning} onClick={planFromDoe}>
+                      一键转为实验计划
+                    </Button>
+                  </Space>
                 </Card>
               )}
             </Space>
@@ -294,7 +402,15 @@ export default function LabCenter() {
           children: (
             <>
               <Space style={{ marginBottom: 12 }}>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setExpOpen(true)}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    setEditingExp(null);
+                    expForm.resetFields();
+                    setExpOpen(true);
+                  }}
+                >
                   录入实验
                 </Button>
                 <Button icon={<DownloadOutlined />} onClick={exportTraining}>
@@ -388,7 +504,10 @@ export default function LabCenter() {
       <Modal
         title="录入实验结果"
         open={expOpen}
-        onCancel={() => setExpOpen(false)}
+        onCancel={() => {
+          setExpOpen(false);
+          setEditingExp(null);
+        }}
         onOk={() => expForm.submit()}
         destroyOnClose
       >
@@ -438,6 +557,13 @@ export default function LabCenter() {
           </Form.Item>
           <Form.Item name="measurements_text" label="性能实测 JSON（可选）" tooltip='格式：{"硬度": 80, "附着力": 3}'>
             <Input.TextArea rows={3} placeholder='{"硬度": 80, "附着力": 3}' />
+          </Form.Item>
+          <Form.Item
+            name="spec_targets_text"
+            label="目标规格 JSON（可选，用于自动判定）"
+            tooltip='格式：{"硬度": {"min": 75, "max": 85, "unit": "H"}, "附着力": {"min": 3}}'
+          >
+            <Input.TextArea rows={3} placeholder='{"硬度": {"min": 75, "max": 85}, "附着力": {"min": 3}}' />
           </Form.Item>
           <Form.Item name="notes" label="备注">
             <Input.TextArea rows={2} />
