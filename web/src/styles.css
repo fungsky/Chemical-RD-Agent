@@ -52,6 +52,18 @@ body {
 html[data-theme='dark'] body {
   background: #0f141d;
 }
+html[data-theme='dark'] .ant-layout-sider {
+  background: #161b26 !important;
+  border-right: 1px solid #232a38;
+}
+html[data-theme='dark'] .ant-layout-header {
+  background: #161b26 !important;
+  border-bottom: 1px solid #232a38;
+  color: #e5e7eb;
+}
+html[data-theme='dark'] .ant-layout-sider .ant-typography {
+  color: #e5e7eb;
+}
 html[data-theme='dark'] .login-card {
   background: #1b2230 !important;
   color: #e5e7eb;
