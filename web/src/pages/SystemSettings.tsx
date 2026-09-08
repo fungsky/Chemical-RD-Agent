@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   App,
   Button,
@@ -69,6 +69,22 @@ const AI_PRESETS: Record<string, { base_url: string; chat_model: string; emb_mod
   anthropic: { base_url: 'https://api.anthropic.com/v1', chat_model: 'claude-3-5-sonnet-20241022', emb_model: '' },
   custom_openai: { base_url: '', chat_model: '', emb_model: '' },
 };
+
+function ConfigRow({ label, tip, children }: { label: string; tip?: string; children: ReactNode }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <Typography.Text strong>{label}</Typography.Text>
+      {tip && (
+        <div>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {tip}
+          </Typography.Text>
+        </div>
+      )}
+      <div style={{ marginTop: 6, maxWidth: 720 }}>{children}</div>
+    </div>
+  );
+}
 
 function ConfigRowEditor({ row, onSave }: { row: ConfigRow; onSave: (value: string) => void }) {
   const [value, setValue] = useState(row.value || '');
@@ -342,9 +358,9 @@ export default function SystemSettings() {
             children: (
               <Space direction="vertical" size={18} style={{ width: '100%' }}>
                 <Card title="LLM（对话/推理）" style={{ maxWidth: 860 }}>
-                  <Space wrap>
+                  <ConfigRow label="服务商" tip="选择后自动带出 Hermes 同款预设地址与推荐模型">
                     <Select
-                      style={{ width: 200 }}
+                      style={{ width: 260 }}
                       value={llm.provider}
                       onChange={(v) => {
                         const p = AI_PRESETS[v] || AI_PRESETS.custom_openai;
@@ -352,58 +368,74 @@ export default function SystemSettings() {
                       }}
                       options={PROVIDERS.map((p) => ({ label: p, value: p }))}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="Base URL" tip="OpenAI 兼容接口地址，如 https://open.bigmodel.cn/api/paas/v4">
                     <Input
-                      style={{ width: 320 }}
+                      style={{ width: 560 }}
                       placeholder="Base URL"
                       value={llm.base_url || ''}
                       onChange={(e) => setLlm({ ...llm, base_url: e.target.value })}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="模型" tip="如 glm-4-flash / deepseek-chat / gpt-4o-mini">
                     <Input
-                      style={{ width: 220 }}
+                      style={{ width: 320 }}
                       placeholder="Model"
                       value={llm.model || ''}
                       onChange={(e) => setLlm({ ...llm, model: e.target.value })}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="API Key" tip="留空表示保持当前已保存密钥不变">
                     <Input.Password
-                      style={{ width: 300 }}
+                      style={{ width: 560 }}
                       placeholder={llm.api_key ? `已配置：${llm.api_key}（留空保持不变）` : 'API Key'}
                       value={llm.api_key_input || ''}
                       onChange={(e) => setLlm({ ...llm, api_key_input: e.target.value })}
                     />
-                  </Space>
+                  </ConfigRow>
                   {llm.provider === 'azure_openai' && (
-                    <Space style={{ marginTop: 10 }}>
-                      <Input
-                        style={{ width: 260 }}
-                        placeholder="Azure Deployment"
-                        value={llm.azure_deployment || ''}
-                        onChange={(e) => setLlm({ ...llm, azure_deployment: e.target.value })}
-                      />
-                      <Input
-                        style={{ width: 160 }}
-                        placeholder="API Version"
-                        value={llm.azure_api_version || '2024-02-01'}
-                        onChange={(e) => setLlm({ ...llm, azure_api_version: e.target.value })}
-                      />
-                    </Space>
+                    <>
+                      <ConfigRow label="Azure Deployment">
+                        <Input
+                          style={{ width: 360 }}
+                          placeholder="Azure Deployment"
+                          value={llm.azure_deployment || ''}
+                          onChange={(e) => setLlm({ ...llm, azure_deployment: e.target.value })}
+                        />
+                      </ConfigRow>
+                      <ConfigRow label="API Version">
+                        <Input
+                          style={{ width: 240 }}
+                          placeholder="API Version"
+                          value={llm.azure_api_version || '2024-02-01'}
+                          onChange={(e) => setLlm({ ...llm, azure_api_version: e.target.value })}
+                        />
+                      </ConfigRow>
+                    </>
                   )}
-                  <Space style={{ marginTop: 12 }}>
+                  <ConfigRow label="输出上限 Max tokens" tip="单次回复最大生成 token 数">
                     <Input
-                      style={{ width: 120 }}
+                      style={{ width: 180 }}
                       type="number"
-                      addonBefore="Max tokens"
                       value={llm.max_tokens ?? 4096}
                       onChange={(e) => setLlm({ ...llm, max_tokens: Number(e.target.value) })}
                     />
-                    <Input
-                      style={{ width: 110 }}
-                      type="number"
-                      step={0.1}
-                      addonBefore="温度"
-                      value={llm.temperature ?? 0.7}
-                      onChange={(e) => setLlm({ ...llm, temperature: Number(e.target.value) })}
-                    />
-                  </Space>
+                  </ConfigRow>
+                  <ConfigRow
+                    label="temperature（采样随机性）"
+                    tip="LLM 采样参数：值越低越严谨稳定，值越高越发散有创意。研发问答建议 0.1-0.3，起草建议 0.5 左右。"
+                  >
+                    <div style={{ width: 420 }}>
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={llm.temperature ?? 0.7}
+                        onChange={(v) => setLlm({ ...llm, temperature: v })}
+                        marks={{ 0: '0 严谨', 0.5: '0.5 平衡', 1: '1 发散' }}
+                      />
+                    </div>
+                  </ConfigRow>
                   <div style={{ marginTop: 14 }}>
                     <Space>
                       <Button type="primary" loading={savingAi} onClick={saveLlm}>
@@ -416,9 +448,9 @@ export default function SystemSettings() {
                   </div>
                 </Card>
                 <Card title="Embedding（知识库向量化）" style={{ maxWidth: 860 }}>
-                  <Space wrap>
+                  <ConfigRow label="Embedding 服务商" tip="same_as_llm 表示复用上方 LLM 的连接配置">
                     <Select
-                      style={{ width: 200 }}
+                      style={{ width: 260 }}
                       value={emb.provider || 'same_as_llm'}
                       onChange={(v) => {
                         const p = v === 'same_as_llm' ? null : AI_PRESETS[v] || null;
@@ -434,25 +466,31 @@ export default function SystemSettings() {
                         ...PROVIDERS.map((p) => ({ label: p, value: p })),
                       ]}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="Base URL">
                     <Input
-                      style={{ width: 320 }}
+                      style={{ width: 560 }}
                       placeholder="Base URL"
                       value={emb.base_url || ''}
                       onChange={(e) => setEmb({ ...emb, base_url: e.target.value })}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="Embedding 模型">
                     <Input
-                      style={{ width: 220 }}
+                      style={{ width: 320 }}
                       placeholder="Embedding Model"
                       value={emb.model || ''}
                       onChange={(e) => setEmb({ ...emb, model: e.target.value })}
                     />
+                  </ConfigRow>
+                  <ConfigRow label="API Key" tip="留空表示保持当前已保存密钥不变">
                     <Input.Password
-                      style={{ width: 300 }}
+                      style={{ width: 560 }}
                       placeholder={emb.api_key ? `已配置：${emb.api_key}（留空保持不变）` : 'API Key'}
                       value={emb.api_key_input || ''}
                       onChange={(e) => setEmb({ ...emb, api_key_input: e.target.value })}
                     />
-                  </Space>
+                  </ConfigRow>
                   <div style={{ marginTop: 14 }}>
                     <Button type="primary" loading={savingAi} onClick={saveEmb}>
                       保存 Embedding
