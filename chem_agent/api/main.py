@@ -343,6 +343,12 @@ async def health_check():
     return status
 
 
+@app.get("/api/health")
+async def api_health_check():
+    """健康检查别名（供 `/api` 前缀的前端调用）。"""
+    return await health_check()
+
+
 # ============ LLM 配置管理 API ============
 
 _VALID_PROVIDERS = {

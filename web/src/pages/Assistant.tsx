@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Col, Empty, Input, Row, Space, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Input, Row, Space, Switch, Tag, Typography } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -37,6 +37,7 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [agentMode, setAgentMode] = useState(false);
   const [savedMap, setSavedMap] = useState<Record<number, string>>({});
   const { message } = App.useApp();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,7 +62,7 @@ export default function Assistant() {
       const res = await api.post('/chat', {
         message: content,
         history: [],
-        use_agent: false,
+        use_agent: agentMode,
       });
       setMessages((m) => [...m, { role: 'assistant', content: res.data.reply || '（无回复）' }]);
     } catch (e: any) {
@@ -102,7 +103,15 @@ export default function Assistant() {
       <Col flex="auto">
         <Card
           title="AI 研发助理"
-          extra={<Tag color="blue">Zhipu GLM</Tag>}
+          extra={
+            <Space>
+              <Tag color="blue">Zhipu GLM</Tag>
+              <Space size={4}>
+                <Switch size="small" checked={agentMode} onChange={setAgentMode} />
+                <span style={{ fontSize: 12 }}>智能体模式（读取全系统）</span>
+              </Space>
+            </Space>
+          }
           style={{ borderRadius: 12 }}
         >
           <div className="chat-scroll" ref={scrollRef}>
