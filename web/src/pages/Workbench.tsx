@@ -49,6 +49,9 @@ export default function Workbench() {
   const [sampleForm] = Form.useForm();
   const [nextStep, setNextStep] = useState('');
   const [suggesting, setSuggesting] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [health, setHealth] = useState<any>(null);
 
   const loadRequests = async () => {
@@ -117,6 +120,20 @@ export default function Workbench() {
       message.error(e?.response?.data?.detail || '建议生成失败');
     } finally {
       setSuggesting(false);
+    }
+  };
+
+  const generateReport = async () => {
+    if (!selectedId) return;
+    setReportLoading(true);
+    try {
+      const res = await api.get('/rd/report', { params: { request_id: selectedId } });
+      setReportText(res.data?.report || '');
+      setReportOpen(true);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '报告生成失败');
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -215,6 +232,9 @@ export default function Workbench() {
             {nextStep && (
               <Typography.Paragraph style={{ marginTop: 12, whiteSpace: 'pre-wrap' }}>{nextStep}</Typography.Paragraph>
             )}
+            <Button style={{ marginTop: 10 }} block loading={reportLoading} onClick={generateReport}>
+              生成项目研发报告
+            </Button>
           </Card>
         </Space>
       </Col>
@@ -288,6 +308,17 @@ export default function Workbench() {
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="项目研发报告"
+        open={reportOpen}
+        width={820}
+        footer={<Button onClick={() => setReportOpen(false)}>关闭</Button>}
+        onCancel={() => setReportOpen(false)}
+      >
+        <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 12 }}>
+          {reportText || '生成中...'}
+        </Typography.Paragraph>
       </Modal>
     </Row>
   );

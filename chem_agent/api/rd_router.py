@@ -172,12 +172,24 @@ async def next_step(payload: NextStepRequest, _user: UserOut = Depends(require_p
     todos = _todos_for(mgr, req)
     timeline = _timeline_for(mgr, req)
     samples = [s for s in mgr.list_samples() if s.get("request_id") == payload.request_id]
+    recent_experiments = []
+    try:
+        from chem_agent.experiments.manager import get_experiment_manager
+        all_exps = get_experiment_manager().list_all()
+        recent_experiments = [
+            e for e in all_exps
+            if e.project in (req.get("id"), req.get("title"))
+            or (req.get("formula_codes") and e.formula_name in req.get("formula_codes"))
+        ][-10:]
+    except Exception:
+        pass
 
     prompt_parts = [
         f"需求：{req.get('title')}",
         f"要求：{req.get('requirement') or '无'}",
         f"关联配方：{', '.join(req.get('formula_codes') or [])}",
         f"最近样品反馈：{json_dump(samples[-3:]) if samples else '无'}",
+        f"最近实验：{json_dump([{'id': e.experiment_id, 'formula': e.formula_name, 'status': e.status.value, 'measurements': e.measurements} for e in recent_experiments]) if recent_experiments else '无'}",
         f"待办：{json_dump(todos)}",
         f"最近动态：{json_dump(timeline[:10])}",
     ]
@@ -196,6 +208,75 @@ async def next_step(payload: NextStepRequest, _user: UserOut = Depends(require_p
         logger.warning("AI 下一步建议失败: %s", e)
         suggestion = "当前数据不足，无法生成建议。请先补充实验记录或客户反馈。"
     return {"request_id": payload.request_id, "suggestion": suggestion}
+
+
+@router.get("/report")
+async def project_report(request_id: str = Query(...), _user: UserOut = Depends(require_permission("formula:read"))):
+    """按项目生成 Markdown 研发报告（需求+配方+样品+实验+AI 结论）。"""
+    mgr = _mgr()
+    request = mgr.get_request(request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="需求不存在")
+    req = request.model_dump(mode="json")
+    samples = [s for s in mgr.list_samples() if s.get("request_id") == request_id]
+    experiments = []
+    try:
+        from chem_agent.experiments.manager import get_experiment_manager
+        all_exps = get_experiment_manager().list_all()
+        experiments = [
+            e for e in all_exps
+            if e.project in (request_id, req.get("title"))
+            or (req.get("formula_codes") and e.formula_name in req.get("formula_codes"))
+        ]
+    except Exception:
+        pass
+
+    lines = [
+        f"# 研发项目报告：{req.get('title')}",
+        "",
+        f"- 需求编号：{req.get('id')}",
+        f"- 客户/项目：{req.get('customer')}",
+        f"- 状态：{req.get('status')}",
+        f"- 需求描述：{req.get('requirement') or '无'}",
+        "",
+        "## 关联配方",
+    ]
+    try:
+        from chem_agent.auth import database as db
+        for code in req.get("formula_codes") or []:
+            versions = db.get_formula_versions(code)
+            latest = versions[0] if versions else {}
+            lines.append(f"- {code}：最新版本 {latest.get('version_number', '-')}（{latest.get('change_summary') or '无变更记录'}）")
+    except Exception:
+        pass
+
+    lines.extend(["", "## 样品与客户反馈"])
+    for s in samples or [{"sample_id": "无"}]:
+        lines.append(f"- {s.get('sample_id')}：{s.get('feedback_status')} - {s.get('feedback') or '暂无'}")
+
+    lines.extend(["", "## 实验记录与结果"])
+    for e in experiments or []:
+        lines.append(
+            f"- {e.experiment_id}（{e.formula_name}）：{e.status.value}，实测 {json_dump(e.measurements) if e.measurements else '未记录'}"
+        )
+
+    conclusion = "暂无足够数据生成 AI 结论。"
+    if samples or experiments:
+        try:
+            from chem_agent.api.main import llm_service
+            from langchain_core.output_parsers import StrOutputParser
+            import asyncio
+            from chem_agent.config import settings
+            conclusion = await asyncio.wait_for(
+                (llm_service.llm | StrOutputParser()).ainvoke(
+                    "基于以下研发项目摘要给出项目结论与风险：\n" + "\n".join(lines[:80])
+                ),
+                timeout=settings.llm_timeout_seconds,
+            )
+        except Exception:
+            pass
+    lines.extend(["", "## AI 结论", "", conclusion])
+    return {"report_id": request_id, "report": "\n".join(lines)}
 
 
 def json_dump(obj) -> str:

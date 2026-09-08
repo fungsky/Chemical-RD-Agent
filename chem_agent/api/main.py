@@ -1323,12 +1323,15 @@ async def train_predictor(request: TrainRequest, _user: UserOut = Depends(requir
 
         if not training_data:
             training_data = []
+        kg_count = len(training_data)
 
         # 合并实验记录导出的训练数据（DOE→实验→模型 闭环）
+        exp_count = 0
         try:
             from chem_agent.experiments.manager import get_experiment_manager
             experiment_export = get_experiment_manager().export_training_data()
             if experiment_export.training_data:
+                exp_count = len(experiment_export.training_data)
                 training_data.extend(experiment_export.training_data)
         except Exception as e:
             logger.warning("实验训练数据合并跳过: %s", e)
@@ -1337,6 +1340,10 @@ async def train_predictor(request: TrainRequest, _user: UserOut = Depends(requir
             raise HTTPException(status_code=400, detail="知识图谱和实验记录中都没有足够的训练数据")
 
         results = predictor.train(training_data, request.target_properties)
+        for prop, info in results.items():
+            if info.get("status") == "trained":
+                info["data_sources"] = {"knowledge_graph": kg_count, "experiments": exp_count}
+                info["reliability"] = "reliable" if int(info.get("samples", 0)) >= 10 else "low"
         predictor.save()
         return TrainResponse(results=results)
     except HTTPException:

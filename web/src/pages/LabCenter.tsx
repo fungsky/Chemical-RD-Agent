@@ -54,6 +54,7 @@ export default function LabCenter() {
   const [predCat, setPredCat] = useState('胶粘剂');
   const [predProps, setPredProps] = useState('硬度, 附着力');
   const [predRes, setPredRes] = useState<any[]>([]);
+  const [trainRes, setTrainRes] = useState<any>(null);
   const [predLoading, setPredLoading] = useState(false);
   const [trainLoading, setTrainLoading] = useState(false);
   const [planProject, setPlanProject] = useState('胶粘剂项目A');
@@ -238,8 +239,8 @@ export default function LabCenter() {
     try {
       const props = predProps.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
       const res = await api.post('/predict/train', { target_properties: props });
-      message.success('训练完成');
-      console.log(res.data);
+      setTrainRes(res.data?.results || {});
+      message.success('训练完成，请查看可信度');
     } catch (e: any) {
       const d = e?.response?.data?.detail;
       message.error(typeof d === 'string' ? d : '训练失败');
@@ -492,6 +493,38 @@ export default function LabCenter() {
                       { title: '预测值', dataIndex: 'predicted_value' },
                       { title: '置信度', dataIndex: 'confidence', render: (v) => `${(v * 100).toFixed(1)}%` },
                       { title: '说明', dataIndex: 'explanation' },
+                    ]}
+                  />
+                </Card>
+              )}
+              {trainRes && Object.keys(trainRes).length > 0 && (
+                <Card title="训练报告（样本与可信度）" style={{ borderRadius: 12 }}>
+                  <Table
+                    rowKey="prop"
+                    size="small"
+                    pagination={false}
+                    dataSource={Object.entries(trainRes).map(([prop, info]: any) => ({ prop, ...info }))}
+                    columns={[
+                      { title: '指标', dataIndex: 'prop' },
+                      { title: '状态', dataIndex: 'status', render: (v) => <Tag color={v === 'trained' ? 'green' : 'red'}>{v}</Tag> },
+                      { title: '样本数', dataIndex: 'samples' },
+                      {
+                        title: '数据来源',
+                        dataIndex: 'data_sources',
+                        render: (v) => (v ? `配方 ${v.knowledge_graph} / 实验 ${v.experiments}` : '-'),
+                      },
+                      { title: 'R²', dataIndex: 'r2' },
+                      { title: 'CV R²', dataIndex: 'cv_r2_mean' },
+                      {
+                        title: '可信度',
+                        dataIndex: 'reliability',
+                        render: (v) =>
+                          v === 'reliable' ? (
+                            <Tag color="green">可靠（样本≥10）</Tag>
+                          ) : (
+                            <Tag color="orange">样本不足，仅供参考</Tag>
+                          ),
+                      },
                     ]}
                   />
                 </Card>
