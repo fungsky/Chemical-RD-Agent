@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     llm_api_key: str = ""               # API Key
     llm_max_tokens: int = 4096          # Token 上下文窗口
     llm_temperature: float = 0.7        # 生成温度
+    llm_reasoning_effort: str = "medium"  # 推理强度: none/minimal/low/medium/high/xhigh/max/ultra
 
     # === Embedder 配置 ===
     embedding_provider: str = ""        # "same_as_llm" 或 Provider 代码

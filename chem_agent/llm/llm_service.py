@@ -244,12 +244,19 @@ class LLMService:
         # 所有 OpenAI 兼容 Provider (openai, deepseek, zhipu, qwen, moonshot, ...)
         logger.info("创建 OpenAI 兼容 Chat 模型 [%s]: %s @ %s",
                     provider, settings.llm_model, settings.llm_base_url)
+        model_kwargs = {
+            "base_url": settings.llm_base_url,
+            "api_key": settings.llm_api_key or "not-needed",
+            "model": settings.llm_model,
+            "temperature": settings.llm_temperature,
+            "max_tokens": settings.llm_max_tokens,
+        }
+        if provider in ("openai", "custom_openai") and settings.llm_reasoning_effort:
+            model_kwargs["extra_body"] = {
+                "reasoning_effort": settings.llm_reasoning_effort,
+            }
         return ChatOpenAI(
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key or "not-needed",
-            model=settings.llm_model,
-            temperature=settings.llm_temperature,
-            max_tokens=settings.llm_max_tokens,
+            **model_kwargs
         )
 
     @staticmethod

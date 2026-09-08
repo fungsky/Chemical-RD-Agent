@@ -372,6 +372,7 @@ class LLMConfigPayload(BaseModel):
     azure_api_version: str = ""
     max_tokens: int = 4096
     temperature: float = 0.7
+    reasoning_effort: str = "medium"
 
 
 class LLMTestRequest(BaseModel):
@@ -406,6 +407,7 @@ _LLM_DB_KEYS = {
     "llm.azure_api_version": "azure_api_version",
     "llm.max_tokens": "llm_max_tokens",
     "llm.temperature": "llm_temperature",
+    "llm.reasoning_effort": "llm_reasoning_effort",
 }
 _EMB_DB_KEYS = {
     "emb.provider": "embedding_provider",
@@ -499,6 +501,7 @@ async def get_llm_config(
         "azure_api_version": settings.azure_api_version,
         "max_tokens": settings.llm_max_tokens,
         "temperature": settings.llm_temperature,
+        "reasoning_effort": settings.llm_reasoning_effort,
     }
 
 
@@ -531,6 +534,7 @@ async def save_llm_config(
 
     settings.llm_max_tokens = payload.max_tokens
     settings.llm_temperature = payload.temperature
+    settings.llm_reasoning_effort = (payload.reasoning_effort or "medium").strip() or "medium"
 
     # 持久化到数据库
     _save_config_to_db(_LLM_DB_KEYS, current_user.id, "LLM 配置")

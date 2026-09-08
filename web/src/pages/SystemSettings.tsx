@@ -214,6 +214,7 @@ export default function SystemSettings() {
         azure_api_version: llm.azure_api_version || '',
         max_tokens: Number(llm.max_tokens || 4096),
         temperature: Number(llm.temperature || 0.7),
+        reasoning_effort: llm.reasoning_effort || 'medium',
       });
       message.success('LLM 配置已保存并生效');
       loadAll();
@@ -455,6 +456,20 @@ export default function SystemSettings() {
                         marks={{ 0: '0 严谨', 0.5: '0.5 平衡', 1: '1 发散' }}
                       />
                     </div>
+                  </ConfigRow>
+                  <ConfigRow
+                    label="reasoning_effort（推理强度）"
+                    tip="官方级别：none / minimal / low / medium / high / xhigh / max / ultra。越高模型思考越久、成本越高；不支持该参数的模型会自动忽略。"
+                  >
+                    <Select
+                      style={{ width: 240 }}
+                      value={llm.reasoning_effort || 'medium'}
+                      onChange={(v) => setLlm({ ...llm, reasoning_effort: v })}
+                      options={['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'].map((v) => ({
+                        label: v,
+                        value: v,
+                      }))}
+                    />
                   </ConfigRow>
                   <div style={{ marginTop: 14 }}>
                     <Space>
